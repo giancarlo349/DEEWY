@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef, SyntheticEvent, WheelEvent, TouchEvent } from 'react';
 import { db } from '../firebase';
 import { ref, onValue } from 'firebase/database';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
 import { Download, Maximize2, X, ChevronLeft, ChevronRight, Grid, LayoutList, Share2, Camera, Sparkles, ArrowDown, Home } from 'lucide-react';
 import { PhotoEvent } from '../types';
 
@@ -11,6 +11,135 @@ export default function ClientView({ code }: { code: string }) {
   const [error, setError] = useState<string | null>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('grid');
+  const [zoomScale, setZoomScale] = useState(1);
+  const [dragConstraints, setDragConstraints] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
+  const [imageAspectRatio, setImageAspectRatio] = useState(1);
+  const constraintsRef = useRef<HTMLDivElement>(null);
+  const lastTouchDistance = useRef<number | null>(null);
+  const x = useMotionValue(0);
+  const y = useMotionValue(0);
+
+  useEffect(() => {
+    setZoomScale(1);
+    x.set(0);
+    y.set(0);
+  }, [selectedPhotoIndex]);
+
+  useEffect(() => {
+    let newConstraints = { left: 0, right: 0, top: 0, bottom: 0 };
+
+    if (zoomScale > 1 && constraintsRef.current) {
+      const container = constraintsRef.current.getBoundingClientRect();
+      const containerRatio = container.width / container.height;
+      
+      let renderedWidth, renderedHeight;
+      
+      if (imageAspectRatio > containerRatio) {
+        renderedWidth = container.width;
+        renderedHeight = container.width / imageAspectRatio;
+      } else {
+        renderedHeight = container.height;
+        renderedWidth = container.height * imageAspectRatio;
+      }
+
+      const xOverflow = Math.max(0, (renderedWidth * zoomScale - container.width) / 2);
+      const yOverflow = Math.max(0, (renderedHeight * zoomScale - container.height) / 2);
+      
+      newConstraints = {
+        left: -xOverflow,
+        right: xOverflow,
+        top: -yOverflow,
+        bottom: yOverflow
+      };
+    }
+
+    setDragConstraints(newConstraints);
+
+    // Progressive centering: pull the image back into bounds as zoom decreases
+    const currentX = x.get();
+    const currentY = y.get();
+    
+    const targetX = Math.max(newConstraints.left, Math.min(newConstraints.right, currentX));
+    const targetY = Math.max(newConstraints.top, Math.min(newConstraints.bottom, currentY));
+    
+    if (targetX !== currentX) {
+      animate(x, targetX, { type: "spring", stiffness: 300, damping: 30 });
+    }
+    if (targetY !== currentY) {
+      animate(y, targetY, { type: "spring", stiffness: 300, damping: 30 });
+    }
+  }, [zoomScale, imageAspectRatio]);
+
+  const resetZoom = () => setZoomScale(1);
+
+  const toggleZoom = () => {
+    setZoomScale(prev => prev === 1 ? 3 : 1);
+  };
+
+  const handleWheel = (e: WheelEvent) => {
+    if (selectedPhotoIndex === null) return;
+    // Prevent background scroll
+    if (e.cancelable) e.preventDefault();
+    
+    const delta = -e.deltaY;
+    const factor = 0.001;
+    setZoomScale(prev => {
+      const next = prev + delta * factor;
+      return Math.min(Math.max(next, 1), 5);
+    });
+  };
+
+  useEffect(() => {
+    const el = constraintsRef.current;
+    if (!el) return;
+
+    const onWheel = (e: globalThis.WheelEvent) => {
+      if (selectedPhotoIndex !== null) {
+        e.preventDefault();
+      }
+    };
+
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [selectedPhotoIndex]);
+
+  useEffect(() => {
+    if (selectedPhotoIndex !== null) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [selectedPhotoIndex]);
+
+  const handleTouchMove = (e: TouchEvent) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
+      
+      if (lastTouchDistance.current !== null) {
+        const delta = distance - lastTouchDistance.current;
+        const factor = 0.01;
+        setZoomScale(prev => {
+          const next = prev + delta * factor;
+          return Math.min(Math.max(next, 1), 5);
+        });
+      }
+      lastTouchDistance.current = distance;
+    }
+  };
+
+  const handleTouchEnd = () => {
+    lastTouchDistance.current = null;
+  };
+
+  const handleImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setImageAspectRatio(img.naturalWidth / img.naturalHeight);
+  };
 
   useEffect(() => {
     const eventRef = ref(db, `public_events/${code}`);
@@ -94,7 +223,7 @@ export default function ClientView({ code }: { code: string }) {
               opacity: [0.1, 0.2, 0.1]
             }}
             transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-            className="absolute -top-40 -left-40 w-80 h-80 border border-white/10 rounded-full blur-3xl pointer-events-none"
+            className="absolute -top-40 -left-40 w-80 h-80 border border-white/10 rounded-full pointer-events-none"
           />
           <motion.div 
             animate={{ 
@@ -103,7 +232,7 @@ export default function ClientView({ code }: { code: string }) {
               opacity: [0.1, 0.2, 0.1]
             }}
             transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-            className="absolute -bottom-40 -right-40 w-80 h-80 border border-white/10 rounded-full blur-3xl pointer-events-none"
+            className="absolute -bottom-40 -right-40 w-80 h-80 border border-white/10 rounded-full pointer-events-none"
           />
         </div>
       </div>
@@ -141,7 +270,7 @@ export default function ClientView({ code }: { code: string }) {
             opacity: [0.05, 0.1, 0.05]
           }}
           transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-          className="absolute top-[20%] -left-20 w-[40vw] h-[40vw] rounded-full bg-primary/20 blur-[120px]"
+          className="absolute top-[20%] -left-20 w-[40vw] h-[40vw] rounded-full bg-primary/20"
         />
         <motion.div 
           animate={{ 
@@ -149,7 +278,7 @@ export default function ClientView({ code }: { code: string }) {
             opacity: [0.05, 0.1, 0.05]
           }}
           transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-[10%] -right-20 w-[30vw] h-[30vw] rounded-full bg-white/5 blur-[100px]"
+          className="absolute bottom-[10%] -right-20 w-[30vw] h-[30vw] rounded-full bg-white/5"
         />
       </div>
 
@@ -177,7 +306,7 @@ export default function ClientView({ code }: { code: string }) {
               href="/"
               initial={{ x: -20, opacity: 0 }}
               animate={{ x: 0, opacity: 1 }}
-              className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-full flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
+              className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
               title="Voltar para o Início"
             >
               <Home size={20} />
@@ -354,7 +483,7 @@ export default function ClientView({ code }: { code: string }) {
                 />
               
               <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 backdrop-blur-md rounded-full border border-white/10">
+                <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 rounded-full border border-white/10">
                   <Camera size={10} className="text-primary md:w-3 md:h-3" />
                   <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest">Captured by Deewy</span>
                 </div>
@@ -409,10 +538,10 @@ export default function ClientView({ code }: { code: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-dark/98 md:backdrop-blur-lg flex flex-col grain"
+            className="fixed inset-0 z-50 bg-dark/98 backdrop-blur-md flex flex-col grain"
           >
-            {/* Lightbox Header */}
-            <div className="p-4 md:p-8 flex items-center justify-between border-b border-white/5">
+            {/* Lightbox Header - Transparent Bar */}
+            <div className="h-[70px] md:h-[90px] px-4 md:px-6 flex items-center justify-between bg-transparent z-30 border-b border-white/5">
               <div className="flex items-center gap-4">
                 <div className="text-xl md:text-2xl font-black tracking-tighter">DEEWY</div>
                 <div className="h-4 w-px bg-white/10" />
@@ -421,6 +550,13 @@ export default function ClientView({ code }: { code: string }) {
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-6">
+                <button 
+                  onClick={toggleZoom}
+                  className={`flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all ${zoomScale > 1 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                >
+                  <Maximize2 size={14} className="md:w-4 md:h-4" /> 
+                  <span className="hidden sm:inline">{zoomScale > 1 ? 'Reduzir' : 'Zoom'}</span>
+                </button>
                 <button 
                   onClick={() => handleDownload(event.photoUrls[selectedPhotoIndex], `deewy-${event.name}-${selectedPhotoIndex}.jpg`)}
                   className="flex items-center gap-2 md:gap-3 bg-white text-dark px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-primary hover:text-white transition-all"
@@ -436,35 +572,55 @@ export default function ClientView({ code }: { code: string }) {
               </div>
             </div>
 
-            {/* Lightbox Image */}
-            <div className="flex-1 relative flex items-center justify-center p-4 md:p-12 overflow-hidden">
-              <button 
-                onClick={prevPhoto}
-                className="absolute left-4 md:left-8 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
-              >
-                <ChevronLeft size={32} className="md:w-12 md:h-12" />
-              </button>
+            {/* Lightbox Image Viewport */}
+            <div 
+              className="flex-1 relative flex items-center justify-center overflow-hidden cursor-move touch-none"
+              onClick={resetZoom}
+              onWheel={handleWheel}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              ref={constraintsRef}
+            >
+              {zoomScale === 1 && (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
+                    className="absolute left-4 md:left-8 z-20 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                  >
+                    <ChevronLeft size={32} className="md:w-12 md:h-12" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
+                    className="absolute right-4 md:right-8 z-20 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                  >
+                    <ChevronRight size={32} className="md:w-12 md:h-12" />
+                  </button>
+                </>
+              )}
               
               <motion.img 
                 key={selectedPhotoIndex}
+                style={{ x, y }}
                 initial={{ opacity: 0, scale: 0.98 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.3 }}
+                animate={{ 
+                  opacity: 1, 
+                  scale: zoomScale,
+                }}
+                transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                drag={zoomScale > 1}
+                dragConstraints={dragConstraints}
+                dragElastic={0}
+                onDoubleClick={(e) => { e.stopPropagation(); toggleZoom(); }}
+                onClick={(e) => e.stopPropagation()}
+                onLoad={handleImageLoad}
                 src={event.photoUrls[selectedPhotoIndex]} 
-                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
+                className="max-w-full max-h-full object-contain"
                 alt=""
               />
-
-              <button 
-                onClick={nextPhoto}
-                className="absolute right-4 md:right-8 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
-              >
-                <ChevronRight size={32} className="md:w-12 md:h-12" />
-              </button>
             </div>
 
-            {/* Thumbnails */}
-            <div className="p-4 md:p-8 overflow-x-auto flex justify-center gap-3 md:gap-4 no-scrollbar">
+            {/* Thumbnails - Transparent Bar */}
+            <div className="h-[100px] md:h-[140px] px-4 md:px-6 overflow-x-auto flex items-center justify-center gap-3 md:gap-4 no-scrollbar bg-transparent z-30 border-t border-white/5">
               {event.photoUrls.map((url, i) => (
                 <button 
                   key={i}
