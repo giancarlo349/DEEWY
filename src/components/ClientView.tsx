@@ -421,18 +421,18 @@ export default function ClientView({ code }: { code: string }) {
         {/* Bottom Info */}
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-t border-white/10 pt-8">
           <div className="max-w-md">
-            <p className="text-lg font-medium text-white/60 leading-relaxed">
+            <p className="text-base md:text-lg font-medium text-white/60 leading-relaxed">
               {event.customText || 'Cada registro é uma cápsula do tempo. Explore sua galeria exclusiva e reviva seus melhores momentos.'}
             </p>
           </div>
-          <div className="flex gap-12">
+          <div className="flex gap-6 md:gap-12 w-full md:w-auto justify-between md:justify-start">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2">Total de Registros</div>
-              <div className="text-4xl font-black">{event.photoUrls.length}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1 md:mb-2">Total de Registros</div>
+              <div className="text-2xl md:text-4xl font-black">{event.photoUrls.length}</div>
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-2">Data de Criação</div>
-              <div className="text-4xl font-black">{new Date(event.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1 md:mb-2">Data de Criação</div>
+              <div className="text-2xl md:text-4xl font-black">{new Date(event.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
             </div>
           </div>
         </div>
@@ -547,7 +547,7 @@ export default function ClientView({ code }: { code: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-dark/98 backdrop-blur-md flex flex-col grain"
+            className={`fixed inset-0 z-50 bg-dark/98 flex flex-col ${isMobile ? '' : 'backdrop-blur-md grain'}`}
           >
             {/* Lightbox Header - Transparent Bar */}
             <div className="h-[70px] md:h-[90px] px-4 md:px-6 flex items-center justify-between bg-transparent z-30 border-b border-white/5">
@@ -612,16 +612,22 @@ export default function ClientView({ code }: { code: string }) {
               <motion.img 
                 key={selectedPhotoIndex}
                 style={{ x, y }}
-                initial={{ opacity: 0, scale: 0.98 }}
+                initial={{ opacity: 0, scale: isMobile ? 1 : 0.98 }}
                 animate={{ 
                   opacity: 1, 
                   scale: zoomScale,
                 }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                drag={zoomScale > 1}
-                dragConstraints={dragConstraints}
-                dragElastic={0}
-                onDoubleClick={(e) => { e.stopPropagation(); toggleZoom(); }}
+                transition={isMobile ? { duration: 0.2 } : { type: "spring", stiffness: 300, damping: 30 }}
+                drag={zoomScale > 1 || isMobile ? "x" : false}
+                dragConstraints={zoomScale > 1 ? dragConstraints : { left: 0, right: 0 }}
+                dragElastic={isMobile && zoomScale === 1 ? 0.2 : 0}
+                onDragEnd={(_, info) => {
+                  if (zoomScale === 1 && isMobile) {
+                    if (info.offset.x < -50) nextPhoto();
+                    else if (info.offset.x > 50) prevPhoto();
+                  }
+                }}
+                onDoubleClick={(e) => { e.stopPropagation(); if (!isMobile) toggleZoom(); }}
                 onClick={(e) => e.stopPropagation()}
                 onLoad={handleImageLoad}
                 src={event.photoUrls[selectedPhotoIndex]} 
@@ -631,17 +637,19 @@ export default function ClientView({ code }: { code: string }) {
             </div>
 
             {/* Thumbnails - Transparent Bar */}
-            <div className="h-[100px] md:h-[140px] px-4 md:px-6 overflow-x-auto flex items-center justify-center gap-3 md:gap-4 no-scrollbar bg-transparent z-30 border-t border-white/5">
-              {event.photoUrls.map((url, i) => (
-                <button 
-                  key={i}
-                  onClick={() => setSelectedPhotoIndex(i)}
-                  className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
-                >
-                  <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
-                </button>
-              ))}
-            </div>
+            {!isMobile && (
+              <div className="h-[100px] md:h-[140px] px-4 md:px-6 overflow-x-auto flex items-center justify-center gap-3 md:gap-4 no-scrollbar bg-transparent z-30 border-t border-white/5">
+                {event.photoUrls.map((url, i) => (
+                  <button 
+                    key={i}
+                    onClick={() => setSelectedPhotoIndex(i)}
+                    className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
+                  >
+                    <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
+                  </button>
+                ))}
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
