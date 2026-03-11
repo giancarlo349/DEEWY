@@ -205,14 +205,17 @@ export default function ClientView({ code }: { code: string }) {
             className="flex flex-col items-center"
           >
             <motion.div 
-              animate={{ 
-                letterSpacing: ['0.2em', '0.8em', '0.2em'],
-                opacity: [0.5, 1, 0.5]
-              }}
-              transition={{ repeat: Infinity, duration: 4, ease: "easeInOut" }}
-              className="text-white font-black text-8xl tracking-tighter"
+              initial={{ opacity: 0, scale: 0.8 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, ease: "easeOut" }}
+              className="mb-8"
             >
-              DEEWY
+              <img 
+                src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+                alt="Deewy" 
+                className="h-24 md:h-32 w-auto object-contain"
+                referrerPolicy="no-referrer"
+              />
             </motion.div>
             <motion.div 
               initial={{ opacity: 0 }}
@@ -266,8 +269,8 @@ export default function ClientView({ code }: { code: string }) {
     );
   }
 
-  const primaryColor = event.primaryColor || '#E60023';
-  const secondaryColor = event.secondaryColor || '#0A0A0A';
+  const primaryColor = event.primaryColor || '#f0052d';
+  const secondaryColor = event.secondaryColor || '#090005';
 
   return (
     <div className="min-h-screen bg-dark text-white selection:bg-white selection:text-dark grain overflow-x-hidden relative" style={{ '--primary': primaryColor } as any}>
@@ -334,17 +337,14 @@ export default function ClientView({ code }: { code: string }) {
                 <motion.div 
                   initial={{ x: -50, opacity: 0 }}
                   animate={{ x: 0, opacity: 1 }}
-                  className="text-4xl font-black tracking-tighter leading-none"
+                  className="h-10 md:h-12"
                 >
-                  DEEWY
-                </motion.div>
-                <motion.div 
-                  initial={{ x: -30, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-[10px] font-bold tracking-[0.4em] uppercase text-white/40 mt-1"
-                >
-                  Visual Registry
+                  <img 
+                    src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+                    alt="Deewy" 
+                    className="h-full w-auto object-contain"
+                    referrerPolicy="no-referrer"
+                  />
                 </motion.div>
               </>
             )}
@@ -534,7 +534,12 @@ export default function ClientView({ code }: { code: string }) {
             A Deewy acredita que cada clique é uma obra de arte. Obrigado por nos deixar fazer parte da sua história.
           </p>
           <div className="flex flex-col items-center">
-            <div className="text-3xl md:text-4xl font-black tracking-tighter mb-2">DEEWY</div>
+            <img 
+              src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+              alt="Deewy" 
+              className="h-12 md:h-16 w-auto object-contain mb-4"
+              referrerPolicy="no-referrer"
+            />
             <div className="text-[10px] font-bold tracking-[0.5em] uppercase text-white/20">Registro Visual</div>
           </div>
         </div>
@@ -552,7 +557,12 @@ export default function ClientView({ code }: { code: string }) {
             {/* Lightbox Header - Transparent Bar */}
             <div className="h-[70px] md:h-[90px] px-4 md:px-6 flex items-center justify-between bg-transparent z-30 border-b border-white/5">
               <div className="flex items-center gap-4">
-                <div className="text-xl md:text-2xl font-black tracking-tighter">DEEWY</div>
+                <img 
+                  src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267528/Deewy-05_kn9ukp.jpg" 
+                  alt="Deewy Logo" 
+                  className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-white/10"
+                  referrerPolicy="no-referrer"
+                />
                 <div className="h-4 w-px bg-white/10" />
                 <div className="text-[10px] font-black uppercase tracking-widest text-white/40">
                   {selectedPhotoIndex + 1} / {event.photoUrls.length}

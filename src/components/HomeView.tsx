@@ -76,10 +76,14 @@ export default function HomeView() {
         <motion.div 
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
-          className="flex items-center gap-4"
+          className="flex items-center"
         >
-          <div className="w-10 h-10 bg-white text-dark flex items-center justify-center font-black text-xl rounded-full shadow-xl">D</div>
-          <span className="font-black tracking-tighter uppercase text-xl leading-none">Deewy</span>
+          <img 
+            src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+            alt="Deewy Logo" 
+            className="h-10 md:h-12 w-auto object-contain"
+            referrerPolicy="no-referrer"
+          />
         </motion.div>
         
         <nav className="flex items-center gap-6 md:gap-12">
@@ -305,6 +309,12 @@ export default function HomeView() {
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-20 items-center">
             <div>
+              <img 
+                src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267528/Deewy-05_kn9ukp.jpg" 
+                alt="Deewy Logo" 
+                className="w-20 h-20 rounded-3xl object-cover mb-12 border border-white/10"
+                referrerPolicy="no-referrer"
+              />
               <h2 className="text-6xl md:text-9xl font-black tracking-tighter uppercase leading-[0.8] mb-12">
                 LET'S <br />
                 CREATE<span className="text-primary">.</span>

@@ -42,7 +42,12 @@ export default function Login() {
             animate={{ scale: 1 }}
             className="inline-block p-4 bg-white/20 rounded-2xl mb-4"
           >
-            <Camera size={40} />
+            <img 
+              src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267528/Deewy-05_kn9ukp.jpg" 
+              alt="Deewy Logo" 
+              className="w-16 h-16 rounded-xl object-cover"
+              referrerPolicy="no-referrer"
+            />
           </motion.div>
           <h1 className="text-3xl font-bold tracking-tight">Deewy</h1>
           <p className="opacity-80 mt-2">Painel Administrativo</p>

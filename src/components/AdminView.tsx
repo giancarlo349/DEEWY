@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, LogOut, Copy, Trash2, ExternalLink, Image as ImageIcon, Type, Hash, Check, X, Edit3, Palette, Sparkles, Search, LayoutGrid, Briefcase, Heart, Camera } from 'lucide-react';
 import { PhotoEvent, PortfolioData } from '../types';
 
-const PRESET_COLORS = ['#E60023', '#0A0A0A', '#D4AF37', '#10B981', '#6366F1', '#FB7185', '#FFFFFF'];
+const PRESET_COLORS = ['#f0052d', '#090005', '#D4AF37', '#10B981', '#6366F1', '#FB7185', '#FFFFFF'];
 
 export default function AdminView({ user }: { user: User }) {
   const [events, setEvents] = useState<PhotoEvent[]>([]);
@@ -21,8 +21,8 @@ export default function AdminView({ user }: { user: User }) {
     photoUrls: '',
     customText: '',
     logoUrl: '',
-    primaryColor: '#E60023',
-    secondaryColor: '#0A0A0A'
+    primaryColor: '#f0052d',
+    secondaryColor: '#090005'
   });
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,8 +91,8 @@ export default function AdminView({ user }: { user: User }) {
         photoUrls: event.photoUrls.join('\n'),
         customText: event.customText,
         logoUrl: event.logoUrl || '',
-        primaryColor: event.primaryColor || '#E60023',
-        secondaryColor: event.secondaryColor || '#0A0A0A'
+        primaryColor: event.primaryColor || '#f0052d',
+        secondaryColor: event.secondaryColor || '#090005'
       });
     } else {
       setEditingEvent(null);
@@ -101,8 +101,8 @@ export default function AdminView({ user }: { user: User }) {
         photoUrls: '',
         customText: '',
         logoUrl: '',
-        primaryColor: '#E60023',
-        secondaryColor: '#0A0A0A'
+        primaryColor: '#f0052d',
+        secondaryColor: '#090005'
       });
     }
     setIsModalOpen(true);
@@ -168,12 +168,12 @@ export default function AdminView({ user }: { user: User }) {
       <header className="bg-white/80 backdrop-blur-xl border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-6 h-24 flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <motion.div 
-              whileHover={{ rotate: 180 }}
-              className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center text-white font-black text-2xl shadow-xl shadow-primary/20"
-            >
-              D
-            </motion.div>
+            <img 
+              src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267528/Deewy-05_kn9ukp.jpg" 
+              alt="Deewy Logo" 
+              className="w-12 h-12 rounded-2xl object-cover shadow-xl border border-gray-100"
+              referrerPolicy="no-referrer"
+            />
             <div>
               <h1 className="text-2xl font-black tracking-tighter uppercase">Deewy</h1>
               <p className="text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">Registro Visual</p>
@@ -288,7 +288,7 @@ export default function AdminView({ user }: { user: User }) {
                     ) : (
                       <div 
                         className="w-full h-full flex items-center justify-center text-white"
-                        style={{ backgroundColor: event.primaryColor || '#E60023' }}
+                        style={{ backgroundColor: event.primaryColor || '#f0052d' }}
                       >
                         <ImageIcon size={28} />
                       </div>
