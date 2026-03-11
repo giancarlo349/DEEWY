@@ -210,14 +210,14 @@ export default function HomeView() {
               </motion.h2>
             </div>
             
-            <div className="relative group/nav max-w-full">
+            <div className="relative group/nav w-full md:w-auto max-w-full">
               <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-dark via-dark/40 to-transparent z-10 pointer-events-none md:hidden" />
-              <nav className="flex overflow-x-auto no-scrollbar pb-4 md:pb-0 flex-nowrap md:flex-wrap gap-3 md:gap-4 p-1 md:p-1.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full pr-16 md:pr-1.5">
+              <nav className="flex overflow-x-auto md:overflow-visible no-scrollbar pb-4 md:pb-0 flex-nowrap md:flex-wrap items-center justify-start md:justify-center gap-2 md:gap-3 p-1.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-3xl md:rounded-full pr-16 md:pr-1.5">
                 {categories.map((cat) => (
                   <button
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
-                    className={`flex items-center gap-2 md:gap-3 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-[7px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                    className={`flex items-center gap-2 md:gap-3 px-5 md:px-8 py-3 md:py-4 rounded-full text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
                       activeCategory === cat.id 
                         ? 'bg-white text-dark shadow-2xl scale-105' 
                         : 'text-white/40 hover:text-white hover:bg-white/5'
