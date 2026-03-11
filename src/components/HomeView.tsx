@@ -267,10 +267,10 @@ export default function HomeView() {
                         onClick={() => setSelectedPhoto(url)}
                         className={`
                           group relative overflow-hidden cursor-pointer rounded-2xl md:rounded-3xl bg-white/5 border border-white/5 hover:border-white/20 transition-all duration-700
-                          ${isLarge ? 'col-span-12 md:col-span-8 row-span-2 aspect-video md:aspect-auto' : 
-                            isTall ? 'col-span-6 md:col-span-4 row-span-2 aspect-[3/5]' :
-                            isWide ? 'col-span-12 md:col-span-8 aspect-video' :
-                            'col-span-6 md:col-span-4 aspect-[3/4]'}
+                          ${isLarge ? 'col-span-12 md:col-span-6 row-span-2 aspect-video md:aspect-auto' : 
+                            isTall ? 'col-span-6 md:col-span-3 row-span-2 aspect-[3/5]' :
+                            isWide ? 'col-span-12 md:col-span-6 aspect-video' :
+                            'col-span-6 md:col-span-3 aspect-[3/4]'}
                         `}
                       >
                         <img 
