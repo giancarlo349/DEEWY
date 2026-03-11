@@ -353,25 +353,24 @@ export default function ClientView({ code }: { code: string }) {
                   loading="lazy"
                 />
               
-              {/* Branding Overlay */}
-              <div className="absolute top-6 left-6 z-10 opacity-0 group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-2 px-3 py-1.5 bg-dark/60 backdrop-blur-md rounded-full border border-white/10">
-                  <Camera size={12} className="text-primary" />
-                  <span className="text-[8px] font-black uppercase tracking-widest">Captured by Deewy</span>
+              <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 backdrop-blur-md rounded-full border border-white/10">
+                  <Camera size={10} className="text-primary md:w-3 md:h-3" />
+                  <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest">Captured by Deewy</span>
                 </div>
               </div>
 
-              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex flex-col justify-end p-8">
+              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 md:p-8">
                 <div className="flex items-center justify-between">
-                  <div className="text-xs font-black uppercase tracking-widest">Registro #{index + 1}</div>
+                  <div className="text-[10px] md:text-xs font-black uppercase tracking-widest">Registro #{index + 1}</div>
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
                       handleDownload(url, `deewy-${event.name}-${index}.jpg`);
                     }}
-                    className="w-12 h-12 bg-white text-dark rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-xl"
+                    className="w-10 h-10 md:w-12 md:h-12 bg-white text-dark rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-xl"
                   >
-                    <Download size={18} />
+                    <Download size={16} className="md:w-4.5 md:h-4.5" />
                   </button>
                 </div>
               </div>
@@ -389,16 +388,16 @@ export default function ClientView({ code }: { code: string }) {
           className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/5 rounded-full pointer-events-none"
         />
         <div className="relative z-10">
-          <Sparkles className="mx-auto mb-12 text-primary" size={48} />
-          <h2 className="text-6xl md:text-8xl font-black tracking-tighter uppercase mb-8">
+          <Camera className="mx-auto mb-12" size={48} style={{ color: primaryColor }} />
+          <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase mb-8 leading-[0.9] px-4">
             Momentos <br /> <span style={{ color: primaryColor }}>Eternizados</span>
           </h2>
-          <p className="text-white/40 max-w-xl mx-auto font-medium text-lg mb-16">
+          <p className="text-white/40 max-w-xl mx-auto font-medium text-base md:text-lg mb-16 px-6">
             A Deewy acredita que cada clique é uma obra de arte. Obrigado por nos deixar fazer parte da sua história.
           </p>
           <div className="flex flex-col items-center">
-            <div className="text-4xl font-black tracking-tighter mb-2">DEEWY</div>
-            <div className="text-[10px] font-bold tracking-[0.5em] uppercase text-white/20">Visual Registry</div>
+            <div className="text-3xl md:text-4xl font-black tracking-tighter mb-2">DEEWY</div>
+            <div className="text-[10px] font-bold tracking-[0.5em] uppercase text-white/20">Registro Visual</div>
           </div>
         </div>
       </section>
@@ -410,29 +409,29 @@ export default function ClientView({ code }: { code: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 bg-dark/98 backdrop-blur-2xl flex flex-col grain"
+            className="fixed inset-0 z-50 bg-dark/98 md:backdrop-blur-lg flex flex-col grain"
           >
             {/* Lightbox Header */}
-            <div className="p-8 flex items-center justify-between">
+            <div className="p-4 md:p-8 flex items-center justify-between border-b border-white/5">
               <div className="flex items-center gap-4">
-                <div className="text-2xl font-black tracking-tighter">DEEWY</div>
+                <div className="text-xl md:text-2xl font-black tracking-tighter">DEEWY</div>
                 <div className="h-4 w-px bg-white/10" />
                 <div className="text-[10px] font-black uppercase tracking-widest text-white/40">
                   {selectedPhotoIndex + 1} / {event.photoUrls.length}
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-3 md:gap-6">
                 <button 
                   onClick={() => handleDownload(event.photoUrls[selectedPhotoIndex], `deewy-${event.name}-${selectedPhotoIndex}.jpg`)}
-                  className="hidden md:flex items-center gap-3 bg-white text-dark px-8 py-3 rounded-full font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all"
+                  className="flex items-center gap-2 md:gap-3 bg-white text-dark px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-primary hover:text-white transition-all"
                 >
-                  <Download size={16} /> Download Original
+                  <Download size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span>
                 </button>
                 <button 
                   onClick={() => setSelectedPhotoIndex(null)}
-                  className="w-14 h-14 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                  className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
                 >
-                  <X size={32} />
+                  <X size={24} className="md:w-8 md:h-8" />
                 </button>
               </div>
             </div>
@@ -441,36 +440,36 @@ export default function ClientView({ code }: { code: string }) {
             <div className="flex-1 relative flex items-center justify-center p-4 md:p-12 overflow-hidden">
               <button 
                 onClick={prevPhoto}
-                className="absolute left-8 z-10 w-20 h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                className="absolute left-4 md:left-8 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
               >
-                <ChevronLeft size={48} />
+                <ChevronLeft size={32} className="md:w-12 md:h-12" />
               </button>
               
               <motion.img 
                 key={selectedPhotoIndex}
-                initial={{ opacity: 0, scale: 0.95, filter: 'blur(20px)' }}
-                animate={{ opacity: 1, scale: 1, filter: 'blur(0px)' }}
-                transition={{ duration: 0.5 }}
+                initial={{ opacity: 0, scale: 0.98 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.3 }}
                 src={event.photoUrls[selectedPhotoIndex]} 
-                className="max-w-full max-h-full object-contain shadow-[0_0_100px_rgba(0,0,0,0.5)] rounded-lg"
+                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg"
                 alt=""
               />
 
               <button 
                 onClick={nextPhoto}
-                className="absolute right-8 z-10 w-20 h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
+                className="absolute right-4 md:right-8 z-10 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
               >
-                <ChevronRight size={48} />
+                <ChevronRight size={32} className="md:w-12 md:h-12" />
               </button>
             </div>
 
             {/* Thumbnails */}
-            <div className="p-8 overflow-x-auto flex justify-center gap-4 no-scrollbar">
+            <div className="p-4 md:p-8 overflow-x-auto flex justify-center gap-3 md:gap-4 no-scrollbar">
               {event.photoUrls.map((url, i) => (
                 <button 
                   key={i}
                   onClick={() => setSelectedPhotoIndex(i)}
-                  className={`w-16 h-20 rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
+                  className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
                 >
                   <img src={url} className="w-full h-full object-cover" alt="" />
                 </button>

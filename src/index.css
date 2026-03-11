@@ -30,6 +30,13 @@
   animation: noise 1s steps(2) infinite;
 }
 
+@media (max-width: 768px) {
+  .grain::before {
+    animation: none;
+    opacity: 0.03;
+  }
+}
+
 @keyframes noise {
   0% { transform: translate(0,0) }
   10% { transform: translate(-5%,-5%) }
@@ -63,4 +70,15 @@
 .vertical-text {
   writing-mode: vertical-rl;
   text-orientation: mixed;
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

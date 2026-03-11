@@ -150,7 +150,7 @@ export default function AdminView({ user }: { user: User }) {
   };
 
   const copyLink = (code: string) => {
-    const url = `${window.location.origin}${window.location.pathname}?codigo=${code}`;
+    const url = `${window.location.origin}/galeria?codigo=${code}`;
     navigator.clipboard.writeText(url);
     setCopiedId(code);
     setTimeout(() => setCopiedId(null), 2000);
@@ -176,7 +176,7 @@ export default function AdminView({ user }: { user: User }) {
             </motion.div>
             <div>
               <h1 className="text-2xl font-black tracking-tighter uppercase">Deewy</h1>
-              <p className="text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">Visual Registry</p>
+              <p className="text-[10px] font-bold tracking-[0.2em] text-gray-400 uppercase">Registro Visual</p>
             </div>
           </div>
           <div className="flex items-center gap-6">
@@ -328,21 +328,21 @@ export default function AdminView({ user }: { user: User }) {
                     <span className="text-[10px] font-black uppercase tracking-widest text-gray-400">Registros</span>
                     <span className="text-xl font-black">{event.photoUrls.length}</span>
                   </div>
-                  <div className="flex gap-3">
-                    <button 
-                      onClick={() => copyLink(event.code)}
-                      className={`p-4 rounded-2xl transition-all ${copiedId === event.code ? 'bg-green-500 text-white' : 'bg-dark text-white hover:bg-primary shadow-xl shadow-dark/10'}`}
-                    >
-                      {copiedId === event.code ? <Check size={20} /> : <Copy size={20} />}
-                    </button>
-                    <a 
-                      href={`?codigo=${event.code}`}
-                      target="_blank"
-                      className="w-14 h-14 bg-gray-100 text-dark rounded-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all"
-                    >
-                      <ExternalLink size={20} />
-                    </a>
-                  </div>
+                    <div className="flex gap-3">
+                      <button 
+                        onClick={() => copyLink(event.code)}
+                        className={`p-4 rounded-2xl transition-all ${copiedId === event.code ? 'bg-green-500 text-white' : 'bg-dark text-white hover:bg-primary shadow-xl shadow-dark/10'}`}
+                      >
+                        {copiedId === event.code ? <Check size={20} /> : <Copy size={20} />}
+                      </button>
+                      <a 
+                        href={`/galeria?codigo=${event.code}`}
+                        target="_blank"
+                        className="w-14 h-14 bg-gray-100 text-dark rounded-2xl flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                      >
+                        <ExternalLink size={20} />
+                      </a>
+                    </div>
                 </div>
               </motion.div>
             ))}

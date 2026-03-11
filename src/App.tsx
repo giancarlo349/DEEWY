@@ -20,9 +20,10 @@ export default function App() {
       setClientCode(code);
     }
 
-    // Check for admin path
-    if (window.location.pathname === '/admin') {
-      setIsAdminPath(true);
+    // Check for admin or galeria path
+    const path = window.location.pathname;
+    if (path === '/admin' || path === '/galeria') {
+      setIsAdminPath(path === '/admin');
     }
 
     const unsubscribe = onAuthStateChanged(auth, (user) => {

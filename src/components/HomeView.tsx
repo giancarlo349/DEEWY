@@ -67,8 +67,8 @@ export default function HomeView() {
     <div className="min-h-screen bg-dark text-white grain selection:bg-primary selection:text-white font-sans">
       {/* Immersive Background Elements */}
       <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/5 blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-primary/5 blur-[150px] rounded-full" />
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-primary/5 blur-[80px] md:blur-[150px] rounded-full" />
+        <div className="absolute bottom-[-20%] right-[-10%] w-[60%] h-[60%] bg-primary/5 blur-[80px] md:blur-[150px] rounded-full" />
       </div>
 
       {/* Navigation */}
@@ -128,7 +128,7 @@ export default function HomeView() {
           <img 
             src="https://res.cloudinary.com/drguum0vj/image/upload/v1773189755/TRUEDATRUE_1.1.2_eszhv8.jpg"
             alt="Giancarlo Eduardo"
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover object-[20%_center] md:object-center"
             referrerPolicy="no-referrer"
           />
           <div className="absolute inset-0 bg-gradient-to-b from-dark/40 via-dark/20 to-dark" />
@@ -210,22 +210,35 @@ export default function HomeView() {
               </motion.h2>
             </div>
             
-            <nav className="flex overflow-x-auto no-scrollbar pb-2 md:pb-0 flex-nowrap md:flex-wrap gap-4 p-1.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full">
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => setActiveCategory(cat.id)}
-                  className={`flex items-center gap-3 px-6 md:px-8 py-3 md:py-4 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-                    activeCategory === cat.id 
-                      ? 'bg-white text-dark shadow-2xl' 
-                      : 'text-white/40 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  {cat.icon}
-                  {cat.name}
-                </button>
-              ))}
-            </nav>
+            <div className="relative group/nav max-w-full">
+              <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-dark via-dark/40 to-transparent z-10 pointer-events-none md:hidden" />
+              <nav className="flex overflow-x-auto no-scrollbar pb-4 md:pb-0 flex-nowrap md:flex-wrap gap-3 md:gap-4 p-1 md:p-1.5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-full pr-16 md:pr-1.5">
+                {categories.map((cat) => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setActiveCategory(cat.id)}
+                    className={`flex items-center gap-2 md:gap-3 px-5 md:px-8 py-2.5 md:py-4 rounded-full text-[7px] md:text-[9px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+                      activeCategory === cat.id 
+                        ? 'bg-white text-dark shadow-2xl scale-105' 
+                        : 'text-white/40 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <span className="scale-90 md:scale-100">{cat.icon}</span>
+                    {cat.name}
+                  </button>
+                ))}
+              </nav>
+              <div className="absolute -bottom-4 left-0 right-0 flex justify-center md:hidden">
+                <div className="flex gap-1.5 px-3 py-1 bg-white/5 rounded-full border border-white/5">
+                  {categories.map((cat) => (
+                    <div 
+                      key={cat.id}
+                      className={`h-1 rounded-full transition-all duration-500 ${activeCategory === cat.id ? 'w-6 bg-primary' : 'w-1.5 bg-white/10'}`} 
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className="min-h-[600px]">
@@ -333,17 +346,17 @@ export default function HomeView() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] bg-dark/98 backdrop-blur-2xl flex items-center justify-center p-4 md:p-16"
+            className="fixed inset-0 z-[100] bg-dark/98 md:backdrop-blur-lg flex items-center justify-center p-4 md:p-16"
             onClick={() => setSelectedPhoto(null)}
           >
-            <button className="absolute top-10 right-10 w-16 h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white transition-all">
-              <X size={32} />
+            <button className="absolute top-6 right-6 md:top-10 md:right-10 w-12 h-12 md:w-16 md:h-16 bg-white/5 hover:bg-white/10 rounded-full flex items-center justify-center text-white transition-all">
+              <X size={24} className="md:w-8 md:h-8" />
             </button>
             <motion.img 
-              initial={{ scale: 0.95, opacity: 0 }}
+              initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               src={selectedPhoto} 
-              className="max-w-full max-h-full object-contain rounded-3xl shadow-[0_50px_100px_-20px_rgba(0,0,0,0.8)] border border-white/10"
+              className="max-w-full max-h-[85vh] object-contain rounded-2xl md:rounded-3xl shadow-2xl border border-white/10"
               referrerPolicy="no-referrer"
             />
           </motion.div>
