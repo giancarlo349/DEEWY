@@ -18,6 +18,14 @@ export default function ClientView({ code }: { code: string }) {
   const lastTouchDistance = useRef<number | null>(null);
   const x = useMotionValue(0);
   const y = useMotionValue(0);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     setZoomScale(1);
@@ -77,7 +85,7 @@ export default function ClientView({ code }: { code: string }) {
   };
 
   const handleWheel = (e: WheelEvent) => {
-    if (selectedPhotoIndex === null) return;
+    if (selectedPhotoIndex === null || isMobile) return;
     // Prevent background scroll
     if (e.cancelable) e.preventDefault();
     
@@ -115,6 +123,7 @@ export default function ClientView({ code }: { code: string }) {
   }, [selectedPhotoIndex]);
 
   const handleTouchMove = (e: TouchEvent) => {
+    if (isMobile) return;
     if (e.touches.length === 2) {
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
@@ -461,12 +470,12 @@ export default function ClientView({ code }: { code: string }) {
             return (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-100px" }}
-                transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
+                initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 40 }}
+                whileInView={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: isMobile ? "-50px" : "-100px" }}
+                transition={{ duration: isMobile ? 0.4 : 0.8, ease: [0.16, 1, 0.3, 1] }}
                 className={`
-                  relative group overflow-hidden rounded-[2rem] bg-white/5 cursor-zoom-in
+                  relative group overflow-hidden rounded-[2rem] bg-white/5 ${isMobile ? 'cursor-pointer' : 'cursor-zoom-in'}
                   ${!isEditorial ? 'aspect-[3/4]' : 
                     isLarge ? 'col-span-12 md:col-span-8 row-span-2 aspect-video md:aspect-auto' : 
                     isTall ? 'col-span-6 md:col-span-4 row-span-2 aspect-[3/5]' :
@@ -477,7 +486,7 @@ export default function ClientView({ code }: { code: string }) {
               >
                 <img 
                   src={url} 
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110"
+                  className={`w-full h-full object-cover transition-transform duration-1000 ${isMobile ? '' : 'group-hover:scale-110'}`}
                   alt={`Registro ${index + 1}`}
                   loading="lazy"
                 />
@@ -485,7 +494,7 @@ export default function ClientView({ code }: { code: string }) {
               <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                 <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 rounded-full border border-white/10">
                   <Camera size={10} className="text-primary md:w-3 md:h-3" />
-                  <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest">Captured by Deewy</span>
+                  <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest hidden md:inline">Captured by Deewy</span>
                 </div>
               </div>
 
@@ -550,13 +559,15 @@ export default function ClientView({ code }: { code: string }) {
                 </div>
               </div>
               <div className="flex items-center gap-3 md:gap-6">
-                <button 
-                  onClick={toggleZoom}
-                  className={`flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all ${zoomScale > 1 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
-                >
-                  <Maximize2 size={14} className="md:w-4 md:h-4" /> 
-                  <span className="hidden sm:inline">{zoomScale > 1 ? 'Reduzir' : 'Zoom'}</span>
-                </button>
+                {!isMobile && (
+                  <button 
+                    onClick={toggleZoom}
+                    className={`flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all ${zoomScale > 1 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                  >
+                    <Maximize2 size={14} className="md:w-4 md:h-4" /> 
+                    <span className="hidden sm:inline">{zoomScale > 1 ? 'Reduzir' : 'Zoom'}</span>
+                  </button>
+                )}
                 <button 
                   onClick={() => handleDownload(event.photoUrls[selectedPhotoIndex], `deewy-${event.name}-${selectedPhotoIndex}.jpg`)}
                   className="flex items-center gap-2 md:gap-3 bg-white text-dark px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-primary hover:text-white transition-all"
@@ -627,7 +638,7 @@ export default function ClientView({ code }: { code: string }) {
                   onClick={() => setSelectedPhotoIndex(i)}
                   className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
                 >
-                  <img src={url} className="w-full h-full object-cover" alt="" />
+                  <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
                 </button>
               ))}
             </div>
