@@ -1,13 +1,12 @@
 import React, { useState } from 'react';
 import { auth } from '../firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
+import { signInWithEmailAndPassword } from 'firebase/auth';
 import { motion } from 'motion/react';
-import { Camera, Mail, Lock } from 'lucide-react';
+import { Mail, Lock } from 'lucide-react';
 
 export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [isRegistering, setIsRegistering] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -17,11 +16,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      if (isRegistering) {
-        await createUserWithEmailAndPassword(auth, email, password);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
+      await signInWithEmailAndPassword(auth, email, password);
     } catch (err: any) {
       setError(err.message || 'Ocorreu um erro ao autenticar.');
     } finally {
@@ -94,20 +89,9 @@ export default function Login() {
               disabled={loading}
               className="btn-primary w-full py-4 text-lg"
             >
-              {loading ? 'Carregando...' : isRegistering ? 'Criar Conta' : 'Entrar'}
+              {loading ? 'Carregando...' : 'Entrar'}
             </button>
           </form>
-
-          <div className="mt-8 text-center">
-            <button
-              onClick={() => setIsRegistering(!isRegistering)}
-              className="text-gray-500 hover:text-primary text-sm transition-colors"
-            >
-              {isRegistering 
-                ? 'Já tem uma conta? Entre aqui' 
-                : 'Não tem uma conta? Cadastre-se'}
-            </button>
-          </div>
         </div>
       </motion.div>
     </div>
