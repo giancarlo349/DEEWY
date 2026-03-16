@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, SyntheticEvent, WheelEvent, TouchEvent } from 'react';
+import { useState, useEffect, useRef, SyntheticEvent, WheelEvent, TouchEvent, UIEvent } from 'react';
 import { db } from '../firebase';
 import { ref, onValue } from 'firebase/database';
 import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
@@ -19,6 +19,25 @@ export default function ClientView({ code }: { code: string }) {
   const x = useMotionValue(0);
   const y = useMotionValue(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [currentPage, setCurrentPage] = useState(0);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [maxLoadedIndex, setMaxLoadedIndex] = useState(1);
+  const itemsPerPage = 5; // Fixed for desktop
+
+  // Sync maxLoadedIndex with current view
+  useEffect(() => {
+    const current = selectedPhotoIndex !== null ? selectedPhotoIndex : activeIndex;
+    setMaxLoadedIndex(prev => Math.max(prev, current + 1));
+  }, [selectedPhotoIndex, activeIndex]);
+
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (!isMobile) return;
+    const container = e.currentTarget;
+    const scrollLeft = container.scrollLeft;
+    const itemWidth = container.offsetWidth * 0.85;
+    const index = Math.round(scrollLeft / (itemWidth + 24)); // 24 is gap-6
+    setActiveIndex(index);
+  };
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -183,16 +202,59 @@ export default function ClientView({ code }: { code: string }) {
   };
 
   const nextPhoto = () => {
-    if (event && selectedPhotoIndex !== null) {
-      setSelectedPhotoIndex((selectedPhotoIndex + 1) % event.photoUrls.length);
-    }
+    if (!event || selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex(prev => prev !== null ? (prev + 1) % event.photoUrls.length : null);
   };
 
   const prevPhoto = () => {
-    if (event && selectedPhotoIndex !== null) {
-      setSelectedPhotoIndex((selectedPhotoIndex - 1 + event.photoUrls.length) % event.photoUrls.length);
+    if (!event || selectedPhotoIndex === null) return;
+    setSelectedPhotoIndex(prev => prev !== null ? (prev - 1 + event.photoUrls.length) % event.photoUrls.length : null);
+  };
+
+  const totalPages = event ? Math.ceil(event.photoUrls.length / itemsPerPage) : 0;
+  const visiblePhotos = event ? event.photoUrls.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) : [];
+
+  const nextPage = () => {
+    if (event && currentPage < totalPages - 1) {
+      setCurrentPage(prev => prev + 1);
     }
   };
+
+  const prevPage = () => {
+    if (event && currentPage > 0) {
+      setCurrentPage(prev => prev - 1);
+    }
+  };
+
+  // Sync page when photo changes (e.g. via arrows in lightbox)
+  useEffect(() => {
+    if (selectedPhotoIndex !== null) {
+      const newPage = Math.floor(selectedPhotoIndex / itemsPerPage);
+      // Only update currentPage if the new photo is on a different page
+      // Use functional update to avoid stale closure issues with currentPage
+      setCurrentPage(current => {
+        if (newPage !== current) return newPage;
+        return current;
+      });
+    }
+  }, [selectedPhotoIndex, itemsPerPage]);
+
+  // Keyboard navigation
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (selectedPhotoIndex !== null) {
+        if (e.key === 'ArrowRight') nextPhoto();
+        if (e.key === 'ArrowLeft') prevPhoto();
+        if (e.key === 'Escape') setSelectedPhotoIndex(null);
+      } else {
+        if (e.key === 'ArrowRight') nextPage();
+        if (e.key === 'ArrowLeft') prevPage();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [selectedPhotoIndex, event, totalPages, currentPage]); // Include dependencies for correct closure values
 
   if (loading) {
     return (
@@ -420,7 +482,7 @@ export default function ClientView({ code }: { code: string }) {
 
         {/* Bottom Info */}
         <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-t border-white/10 pt-8">
-          <div className="max-w-md">
+          <div className="max-w-md hidden md:block">
             <p className="text-base md:text-lg font-medium text-white/60 leading-relaxed">
               {event.customText || 'Cada registro é uma cápsula do tempo. Explore sua galeria exclusiva e reviva seus melhores momentos.'}
             </p>
@@ -442,79 +504,148 @@ export default function ClientView({ code }: { code: string }) {
       <section className="px-8 md:px-16 py-32 bg-dark">
         {/* Controls */}
         <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-20">
-          <h2 className="text-4xl font-black tracking-tighter uppercase">A <span style={{ color: primaryColor }}>Coleção</span></h2>
-          <div className="flex items-center gap-4 p-2 bg-white/5 rounded-full border border-white/10">
-            <button 
-              onClick={() => setViewMode('grid')}
-              className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
-            >
-              Grid
-            </button>
-            <button 
-              onClick={() => setViewMode('masonry')}
-              className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'masonry' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
-            >
-              Editorial
-            </button>
+          <div className="flex flex-col items-center md:items-start gap-2">
+            <h2 className="text-4xl font-black tracking-tighter uppercase">A <span style={{ color: primaryColor }}>Coleção</span></h2>
+            {isMobile && (
+              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
+                {activeIndex + 1} / {event.photoUrls.length}
+              </div>
+            )}
           </div>
+          {!isMobile && (
+            <div className="flex items-center gap-4 p-2 bg-white/5 rounded-full border border-white/10">
+              <button 
+                onClick={() => setViewMode('grid')}
+                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
+              >
+                Grid
+              </button>
+              <button 
+                onClick={() => setViewMode('masonry')}
+                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'masonry' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
+              >
+                Editorial
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Photo Grid */}
-        <div className={`grid gap-4 md:gap-8 ${viewMode === 'grid' ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4' : 'grid-cols-12'}`}>
-          {event.photoUrls.map((url, index) => {
-            const isEditorial = viewMode === 'masonry';
-            const isLarge = isEditorial && index % 7 === 0;
-            const isTall = isEditorial && (index % 7 === 2 || index % 7 === 5);
-            const isWide = isEditorial && index % 7 === 4;
+        {/* Photo Grid with Pagination */}
+        <div className="relative">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={isMobile ? 'mobile-scroll' : currentPage}
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              onScroll={handleScroll}
+              className={`
+                ${isMobile 
+                  ? 'flex overflow-x-auto snap-x snap-mandatory gap-6 pb-8 no-scrollbar -mx-8 px-8 scroll-smooth' 
+                  : `grid gap-6 md:gap-8 ${viewMode === 'grid' ? 'grid-cols-5' : 'grid-cols-12'}`
+                }
+              `}
+            >
+              {(isMobile ? event.photoUrls : visiblePhotos).map((url, index) => {
+                const globalIndex = isMobile ? index : (currentPage * itemsPerPage + index);
+                const isEditorial = viewMode === 'masonry' && !isMobile;
+                const isLarge = isEditorial && globalIndex % 7 === 0;
+                const isTall = isEditorial && (globalIndex % 7 === 2 || globalIndex % 7 === 5);
+                const isWide = isEditorial && globalIndex % 7 === 4;
 
-            return (
-              <motion.div
-                key={index}
-                initial={isMobile ? { opacity: 0 } : { opacity: 0, y: 40 }}
-                whileInView={isMobile ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: isMobile ? "-50px" : "-100px" }}
-                transition={{ duration: isMobile ? 0.4 : 0.8, ease: [0.16, 1, 0.3, 1] }}
-                className={`
-                  relative group overflow-hidden rounded-[2rem] bg-white/5 ${isMobile ? 'cursor-pointer' : 'cursor-zoom-in'}
-                  ${!isEditorial ? 'aspect-[3/4]' : 
-                    isLarge ? 'col-span-12 md:col-span-8 row-span-2 aspect-video md:aspect-auto' : 
-                    isTall ? 'col-span-6 md:col-span-4 row-span-2 aspect-[3/5]' :
-                    isWide ? 'col-span-12 md:col-span-8 aspect-video' :
-                    'col-span-6 md:col-span-4 aspect-[3/4]'}
-                `}
-                onClick={() => setSelectedPhotoIndex(index)}
-              >
-                <img 
-                  src={url} 
-                  className={`w-full h-full object-cover transition-transform duration-1000 ${isMobile ? '' : 'group-hover:scale-110'}`}
-                  alt={`Registro ${index + 1}`}
-                  loading="lazy"
-                />
-              
-              <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 rounded-full border border-white/10">
-                  <Camera size={10} className="text-primary md:w-3 md:h-3" />
-                  <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest hidden md:inline">Captured by Deewy</span>
-                </div>
-              </div>
+                const shouldLoad = !isMobile || globalIndex <= maxLoadedIndex;
 
-              <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 md:p-8">
-                <div className="flex items-center justify-between">
-                  <div className="text-[10px] md:text-xs font-black uppercase tracking-widest">Registro #{index + 1}</div>
-                  <button 
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDownload(url, `deewy-${event.name}-${index}.jpg`);
-                    }}
-                    className="w-10 h-10 md:w-12 md:h-12 bg-white text-dark rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-xl"
+                return (
+                  <motion.div
+                    key={globalIndex}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ duration: 0.4, delay: isMobile ? 0 : index * 0.1 }}
+                    className={`
+                      relative group overflow-hidden rounded-[2rem] bg-white/5 cursor-pointer flex-shrink-0
+                      ${isMobile ? 'w-[85vw] aspect-[3/4] snap-center' : 
+                        !isEditorial ? 'aspect-[3/4]' : 
+                        isLarge ? 'col-span-12 md:col-span-8 row-span-2 aspect-video md:aspect-auto' : 
+                        isTall ? 'col-span-6 md:col-span-4 row-span-2 aspect-[3/5]' :
+                        isWide ? 'col-span-12 md:col-span-8 aspect-video' :
+                        'col-span-6 md:col-span-4 aspect-[3/4]'}
+                    `}
+                    onClick={() => setSelectedPhotoIndex(globalIndex)}
                   >
-                    <Download size={16} className="md:w-4.5 md:h-4.5" />
-                  </button>
+                    {shouldLoad && (
+                      <img 
+                        src={url} 
+                        className={`w-full h-full object-cover transition-transform duration-1000 ${isMobile ? '' : 'group-hover:scale-110'}`}
+                        alt={`Registro ${globalIndex + 1}`}
+                        loading="lazy"
+                      />
+                    )}
+                  
+                  <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                    <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 rounded-full border border-white/10">
+                      <Camera size={10} className="text-primary md:w-3 md:h-3" />
+                      <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest hidden md:inline">Captured by Deewy</span>
+                    </div>
+                  </div>
+
+                  <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 md:p-8">
+                    <div className="flex items-center justify-between">
+                      <div className="text-[10px] md:text-xs font-black uppercase tracking-widest">Registro #{globalIndex + 1}</div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDownload(url, `deewy-${event.name}-${globalIndex}.jpg`);
+                        }}
+                        className="w-10 h-10 md:w-12 md:h-12 bg-white text-dark rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-xl"
+                      >
+                        <Download size={16} className="md:w-4.5 md:h-4.5" />
+                      </button>
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && !isMobile && (
+          <div className="flex flex-col items-center gap-6 mt-20">
+            <div className="flex items-center gap-8">
+              <button 
+                onClick={prevPage}
+                disabled={currentPage === 0}
+                className={`w-14 h-14 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === 0 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white hover:text-dark'}`}
+              >
+                <ChevronLeft size={24} />
+              </button>
+              
+              <div className="flex flex-col items-center">
+                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mb-2">Página</div>
+                <div className="text-xl font-black">
+                  {currentPage + 1} <span className="text-white/20 mx-2">/</span> {totalPages}
                 </div>
               </div>
-            </motion.div>
-          );
-        })}
+
+              <button 
+                onClick={nextPage}
+                disabled={currentPage === totalPages - 1}
+                className={`w-14 h-14 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === totalPages - 1 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white hover:text-dark'}`}
+              >
+                <ChevronRight size={24} />
+              </button>
+            </div>
+
+            {/* Progress Bar */}
+            <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden">
+              <motion.div 
+                initial={false}
+                animate={{ width: `${((currentPage + 1) / totalPages) * 100}%` }}
+                className="h-full bg-primary"
+              />
+            </div>
+          </div>
+        )}
       </div>
       </section>
 
@@ -530,7 +661,7 @@ export default function ClientView({ code }: { code: string }) {
           <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase mb-8 leading-[0.9] px-4">
             Momentos <br /> <span style={{ color: primaryColor }}>Eternizados</span>
           </h2>
-          <p className="text-white/40 max-w-xl mx-auto font-medium text-base md:text-lg mb-16 px-6">
+          <p className="text-white/40 max-w-xl mx-auto font-medium text-base md:text-lg mb-16 px-6 hidden md:block">
             A Deewy acredita que cada clique é uma obra de arte. Obrigado por nos deixar fazer parte da sua história.
           </p>
           <div className="flex flex-col items-center">
@@ -628,13 +759,14 @@ export default function ClientView({ code }: { code: string }) {
                   scale: zoomScale,
                 }}
                 transition={isMobile ? { duration: 0.2 } : { type: "spring", stiffness: 300, damping: 30 }}
-                drag={zoomScale > 1 || isMobile ? "x" : false}
+                drag={zoomScale > 1 ? true : (isMobile ? "x" : false)}
                 dragConstraints={zoomScale > 1 ? dragConstraints : { left: 0, right: 0 }}
                 dragElastic={isMobile && zoomScale === 1 ? 0.2 : 0}
                 onDragEnd={(_, info) => {
                   if (zoomScale === 1 && isMobile) {
-                    if (info.offset.x < -50) nextPhoto();
-                    else if (info.offset.x > 50) prevPhoto();
+                    const threshold = 30; // Reduced threshold for easier swiping
+                    if (info.offset.x < -threshold) nextPhoto();
+                    else if (info.offset.x > threshold) prevPhoto();
                   }
                 }}
                 onDoubleClick={(e) => { e.stopPropagation(); if (!isMobile) toggleZoom(); }}
@@ -646,18 +778,21 @@ export default function ClientView({ code }: { code: string }) {
               />
             </div>
 
-            {/* Thumbnails - Transparent Bar */}
+            {/* Thumbnails - Transparent Bar (Current Page Only) */}
             {!isMobile && (
               <div className="h-[100px] md:h-[140px] px-4 md:px-6 overflow-x-auto flex items-center justify-center gap-3 md:gap-4 no-scrollbar bg-transparent z-30 border-t border-white/5">
-                {event.photoUrls.map((url, i) => (
-                  <button 
-                    key={i}
-                    onClick={() => setSelectedPhotoIndex(i)}
-                    className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === i ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
-                  >
-                    <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
-                  </button>
-                ))}
+                {visiblePhotos.map((url, i) => {
+                  const globalIndex = currentPage * itemsPerPage + i;
+                  return (
+                    <button 
+                      key={globalIndex}
+                      onClick={() => setSelectedPhotoIndex(globalIndex)}
+                      className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === globalIndex ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
+                    >
+                      <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
+                    </button>
+                  );
+                })}
               </div>
             )}
           </motion.div>
