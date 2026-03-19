@@ -16,6 +16,7 @@ export default function ClientView({ code }: { code: string }) {
   const [hasClosedPopup, setHasClosedPopup] = useState(false);
   const [visibleChunks, setVisibleChunks] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [focusedChunkIndex, setFocusedChunkIndex] = useState(0);
 
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
 
@@ -89,6 +90,9 @@ export default function ClientView({ code }: { code: string }) {
     setSelectedPhotoIndex(nextIndex);
     setIsZoomed(false);
     
+    const newChunkIndex = Math.floor(nextIndex / CHUNK_SIZE);
+    setFocusedChunkIndex(newChunkIndex);
+
     // Auto-expand visible chunks if we navigate past them in lightbox
     const neededChunks = Math.ceil((nextIndex + 1) / CHUNK_SIZE);
     if (neededChunks > visibleChunks) {
@@ -101,7 +105,8 @@ export default function ClientView({ code }: { code: string }) {
     const prevIndex = (selectedPhotoIndex - 1 + event.photoUrls.length) % event.photoUrls.length;
     setSelectedPhotoIndex(prevIndex);
     setIsZoomed(false);
-  }, [event, selectedPhotoIndex]);
+    setFocusedChunkIndex(Math.floor(prevIndex / CHUNK_SIZE));
+  }, [event, selectedPhotoIndex, CHUNK_SIZE]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -329,7 +334,7 @@ export default function ClientView({ code }: { code: string }) {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-6">
           {event.photoUrls.slice(0, visibleChunks * CHUNK_SIZE).map((url, index) => {
             const chunkIndex = Math.floor(index / CHUNK_SIZE);
-            const isCurrentChunk = selectedPhotoIndex !== null && Math.floor(selectedPhotoIndex / CHUNK_SIZE) === chunkIndex;
+            const isFocused = chunkIndex === focusedChunkIndex;
             
             return (
               <motion.div
@@ -337,28 +342,43 @@ export default function ClientView({ code }: { code: string }) {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true, margin: "200px" }}
-                transition={{ delay: (index % 5) * 0.1 }}
-                className={`relative group aspect-[3/4] overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white/5 cursor-pointer border border-white/5 transition-all duration-700 ${
-                  selectedPhotoIndex !== null && !isCurrentChunk ? 'opacity-20 blur-[2px] scale-95' : 'opacity-100 blur-0 scale-100'
+                transition={{ duration: 0.4 }}
+                className={`relative group aspect-[3/4] overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white/5 cursor-pointer border border-white/5 transition-all duration-500 ${
+                  !isFocused ? 'opacity-20 grayscale scale-95' : 'opacity-100 grayscale-0 scale-100'
                 }`}
                 onClick={() => {
+                  setFocusedChunkIndex(chunkIndex);
                   setSelectedPhotoIndex(index);
                   setIsZoomed(false);
                 }}
               >
+                {/* Photo by Deewy Tag */}
+                <div className="absolute top-3 left-3 z-10">
+                  <span className="px-2 py-1 bg-black/40 backdrop-blur-md rounded-full text-[8px] font-black uppercase tracking-widest text-white/60 border border-white/10">
+                    Photo by Deewy
+                  </span>
+                </div>
+
+                {/* Always Available Download Button */}
+                <button 
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDownload(url, `deewy-${index}.jpg`);
+                  }}
+                  className="absolute top-3 right-3 z-10 w-8 h-8 md:w-10 md:h-10 bg-white/90 text-black rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-lg"
+                >
+                  <Download size={14} />
+                </button>
+
                 <img 
                   src={url} 
-                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
                   alt="" 
                   loading="lazy"
                 />
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-4 md:p-6">
-                  <div className="flex justify-between items-center translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">#{index + 1}</span>
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all">
-                      <Download size={14} />
-                    </div>
-                  </div>
+                
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-4 md:p-6">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/80">#{index + 1}</span>
                 </div>
               </motion.div>
             );
@@ -369,7 +389,11 @@ export default function ClientView({ code }: { code: string }) {
         {visibleChunks * CHUNK_SIZE < event.photoUrls.length && (
           <div className="mt-16 flex justify-center">
             <button
-              onClick={() => setVisibleChunks(prev => prev + 1)}
+              onClick={() => {
+                const nextChunk = visibleChunks;
+                setVisibleChunks(prev => prev + 1);
+                setFocusedChunkIndex(nextChunk);
+              }}
               className="px-12 py-5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all duration-500 group"
             >
               Carregar <span className="text-primary group-hover:text-black" style={{ color: brandColor }}>Mais {CHUNK_SIZE}</span>
@@ -489,42 +513,6 @@ export default function ClientView({ code }: { code: string }) {
                   <ChevronRight size={24} />
                 </button>
               )}
-            </div>
-
-            {/* Thumbnails Strip (Sliding Window) */}
-            <div className="p-4 md:p-8 bg-black/40 border-t border-white/5 backdrop-blur-md overflow-hidden">
-              <div className="max-w-6xl mx-auto flex justify-center items-center gap-2 md:gap-4">
-                {event.photoUrls.slice(
-                  Math.max(0, selectedPhotoIndex - 4),
-                  Math.min(event.photoUrls.length, selectedPhotoIndex + 5)
-                ).map((url, i) => {
-                  const actualIndex = Math.max(0, selectedPhotoIndex - 4) + i;
-                  const isActive = actualIndex === selectedPhotoIndex;
-                  const chunkIndex = Math.floor(actualIndex / CHUNK_SIZE);
-                  const currentChunkIndex = Math.floor(selectedPhotoIndex / CHUNK_SIZE);
-                  const isSameChunk = chunkIndex === currentChunkIndex;
-
-                  return (
-                    <motion.div
-                      key={actualIndex}
-                      layout
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setSelectedPhotoIndex(actualIndex);
-                        setIsZoomed(false);
-                      }}
-                      className={`
-                        relative aspect-[3/4] w-12 md:w-20 rounded-lg md:rounded-xl overflow-hidden cursor-pointer transition-all duration-500
-                        ${isActive ? 'ring-2 ring-primary scale-110 z-10 shadow-lg shadow-primary/20 opacity-100 blur-0' : 
-                          isSameChunk ? 'opacity-60 grayscale-0 blur-0' : 'opacity-20 grayscale blur-[1px]'}
-                      `}
-                    >
-                      <img src={url} className="w-full h-full object-cover" alt="" />
-                    </motion.div>
-                  );
-                })}
-              </div>
             </div>
           </motion.div>
         )}
