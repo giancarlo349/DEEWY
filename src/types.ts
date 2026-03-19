@@ -9,6 +9,7 @@ export interface PhotoEvent {
   secondaryColor?: string;
   logoUrl?: string;
   ownerId?: string;
+  driveLink?: string;
 }
 
 export interface UserProfile {
@@ -19,13 +20,31 @@ export interface UserProfile {
 export interface PortfolioCategory {
   id: string;
   name: string;
+  title: string;
   photoUrls: string[];
 }
 
 export interface PortfolioData {
-  categories: {
-    negocios: string[];
-    impacto: string[];
-    cotidiano: string[];
+  heroTitle?: string;
+  heroSubtitle?: string;
+  philosophyTitle?: string;
+  philosophyText?: string;
+  urls: string[];
+  categories?: {
+    negocios: {
+      name: string;
+      title: string;
+      urls: string[];
+    };
+    impacto: {
+      name: string;
+      title: string;
+      urls: string[];
+    };
+    cotidiano: {
+      name: string;
+      title: string;
+      urls: string[];
+    };
   };
 }

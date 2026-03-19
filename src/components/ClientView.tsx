@@ -1,8 +1,8 @@
-import { useState, useEffect, useRef, SyntheticEvent, WheelEvent, TouchEvent, UIEvent } from 'react';
+import { useState, useEffect, useRef, SyntheticEvent, UIEvent, useCallback } from 'react';
 import { db } from '../firebase';
 import { ref, onValue } from 'firebase/database';
-import { motion, AnimatePresence, useMotionValue, animate } from 'motion/react';
-import { Download, Maximize2, X, ChevronLeft, ChevronRight, Grid, LayoutList, Share2, Camera, Sparkles, ArrowDown, Home } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Download, X, ChevronLeft, ChevronRight, Share2, Camera, ArrowDown, Home, Instagram, ExternalLink, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
 import { PhotoEvent } from '../types';
 
 export default function ClientView({ code }: { code: string }) {
@@ -10,34 +10,16 @@ export default function ClientView({ code }: { code: string }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null);
-  const [viewMode, setViewMode] = useState<'grid' | 'masonry'>('grid');
-  const [zoomScale, setZoomScale] = useState(1);
-  const [dragConstraints, setDragConstraints] = useState({ left: 0, right: 0, top: 0, bottom: 0 });
-  const [imageAspectRatio, setImageAspectRatio] = useState(1);
-  const constraintsRef = useRef<HTMLDivElement>(null);
-  const lastTouchDistance = useRef<number | null>(null);
-  const x = useMotionValue(0);
-  const y = useMotionValue(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [currentPage, setCurrentPage] = useState(0);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [maxLoadedIndex, setMaxLoadedIndex] = useState(1);
-  const itemsPerPage = 5; // Fixed for desktop
+  const [showInstaPopup, setShowInstaPopup] = useState(false);
+  const [hasClosedPopup, setHasClosedPopup] = useState(false);
+  const [visibleChunks, setVisibleChunks] = useState(1);
+  const [isZoomed, setIsZoomed] = useState(false);
 
-  // Sync maxLoadedIndex with current view
-  useEffect(() => {
-    const current = selectedPhotoIndex !== null ? selectedPhotoIndex : activeIndex;
-    setMaxLoadedIndex(prev => Math.max(prev, current + 1));
-  }, [selectedPhotoIndex, activeIndex]);
+  const [showCopyFeedback, setShowCopyFeedback] = useState(false);
 
-  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
-    if (!isMobile) return;
-    const container = e.currentTarget;
-    const scrollLeft = container.scrollLeft;
-    const itemWidth = container.offsetWidth * 0.85;
-    const index = Math.round(scrollLeft / (itemWidth + 24)); // 24 is gap-6
-    setActiveIndex(index);
-  };
+  const CHUNK_SIZE = isMobile ? 2 : 5;
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -45,129 +27,6 @@ export default function ClientView({ code }: { code: string }) {
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
-
-  useEffect(() => {
-    setZoomScale(1);
-    x.set(0);
-    y.set(0);
-  }, [selectedPhotoIndex]);
-
-  useEffect(() => {
-    let newConstraints = { left: 0, right: 0, top: 0, bottom: 0 };
-
-    if (zoomScale > 1 && constraintsRef.current) {
-      const container = constraintsRef.current.getBoundingClientRect();
-      const containerRatio = container.width / container.height;
-      
-      let renderedWidth, renderedHeight;
-      
-      if (imageAspectRatio > containerRatio) {
-        renderedWidth = container.width;
-        renderedHeight = container.width / imageAspectRatio;
-      } else {
-        renderedHeight = container.height;
-        renderedWidth = container.height * imageAspectRatio;
-      }
-
-      const xOverflow = Math.max(0, (renderedWidth * zoomScale - container.width) / 2);
-      const yOverflow = Math.max(0, (renderedHeight * zoomScale - container.height) / 2);
-      
-      newConstraints = {
-        left: -xOverflow,
-        right: xOverflow,
-        top: -yOverflow,
-        bottom: yOverflow
-      };
-    }
-
-    setDragConstraints(newConstraints);
-
-    // Progressive centering: pull the image back into bounds as zoom decreases
-    const currentX = x.get();
-    const currentY = y.get();
-    
-    const targetX = Math.max(newConstraints.left, Math.min(newConstraints.right, currentX));
-    const targetY = Math.max(newConstraints.top, Math.min(newConstraints.bottom, currentY));
-    
-    if (targetX !== currentX) {
-      animate(x, targetX, { type: "spring", stiffness: 300, damping: 30 });
-    }
-    if (targetY !== currentY) {
-      animate(y, targetY, { type: "spring", stiffness: 300, damping: 30 });
-    }
-  }, [zoomScale, imageAspectRatio]);
-
-  const resetZoom = () => setZoomScale(1);
-
-  const toggleZoom = () => {
-    setZoomScale(prev => prev === 1 ? 3 : 1);
-  };
-
-  const handleWheel = (e: WheelEvent) => {
-    if (selectedPhotoIndex === null || isMobile) return;
-    // Prevent background scroll
-    if (e.cancelable) e.preventDefault();
-    
-    const delta = -e.deltaY;
-    const factor = 0.001;
-    setZoomScale(prev => {
-      const next = prev + delta * factor;
-      return Math.min(Math.max(next, 1), 5);
-    });
-  };
-
-  useEffect(() => {
-    const el = constraintsRef.current;
-    if (!el) return;
-
-    const onWheel = (e: globalThis.WheelEvent) => {
-      if (selectedPhotoIndex !== null) {
-        e.preventDefault();
-      }
-    };
-
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, [selectedPhotoIndex]);
-
-  useEffect(() => {
-    if (selectedPhotoIndex !== null) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = 'unset';
-    }
-    return () => {
-      document.body.style.overflow = 'unset';
-    };
-  }, [selectedPhotoIndex]);
-
-  const handleTouchMove = (e: TouchEvent) => {
-    if (isMobile) return;
-    if (e.touches.length === 2) {
-      const touch1 = e.touches[0];
-      const touch2 = e.touches[1];
-      const distance = Math.hypot(touch1.clientX - touch2.clientX, touch1.clientY - touch2.clientY);
-      
-      if (lastTouchDistance.current !== null) {
-        const delta = distance - lastTouchDistance.current;
-        const factor = 0.01;
-        setZoomScale(prev => {
-          const next = prev + delta * factor;
-          return Math.min(Math.max(next, 1), 5);
-        });
-      }
-      lastTouchDistance.current = distance;
-    }
-  };
-
-  const handleTouchEnd = () => {
-    lastTouchDistance.current = null;
-  };
-
-  const handleImageLoad = (e: SyntheticEvent<HTMLImageElement>) => {
-    const img = e.currentTarget;
-    setImageAspectRatio(img.naturalWidth / img.naturalHeight);
-  };
 
   useEffect(() => {
     const eventRef = ref(db, `public_events/${code}`);
@@ -179,10 +38,33 @@ export default function ClientView({ code }: { code: string }) {
         setError('Galeria não encontrada ou código inválido.');
       }
       setLoading(false);
+    }, (err) => {
+      console.error(err);
+      setError('Erro ao carregar galeria. Verifique sua conexão ou permissões.');
+      setLoading(false);
     });
 
     return () => unsubscribe();
   }, [code]);
+
+  // Show Instagram popup after 5 seconds if not closed before
+  useEffect(() => {
+    if (!loading && !error && !hasClosedPopup) {
+      const timer = setTimeout(() => {
+        setShowInstaPopup(true);
+      }, 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [loading, error, hasClosedPopup]);
+
+  const handleScroll = (e: UIEvent<HTMLDivElement>) => {
+    if (!isMobile) return;
+    const container = e.currentTarget;
+    const scrollLeft = container.scrollLeft;
+    const itemWidth = container.offsetWidth * 0.85;
+    const index = Math.round(scrollLeft / (itemWidth + 24));
+    setActiveIndex(index);
+  };
 
   const handleDownload = async (url: string, filename: string) => {
     try {
@@ -201,480 +83,323 @@ export default function ClientView({ code }: { code: string }) {
     }
   };
 
-  const nextPhoto = () => {
+  const nextPhoto = useCallback(() => {
     if (!event || selectedPhotoIndex === null) return;
-    setSelectedPhotoIndex(prev => prev !== null ? (prev + 1) % event.photoUrls.length : null);
-  };
+    const nextIndex = (selectedPhotoIndex + 1) % event.photoUrls.length;
+    setSelectedPhotoIndex(nextIndex);
+    setIsZoomed(false);
+    
+    // Auto-expand visible chunks if we navigate past them in lightbox
+    const neededChunks = Math.ceil((nextIndex + 1) / CHUNK_SIZE);
+    if (neededChunks > visibleChunks) {
+      setVisibleChunks(neededChunks);
+    }
+  }, [event, selectedPhotoIndex, CHUNK_SIZE, visibleChunks]);
 
-  const prevPhoto = () => {
+  const prevPhoto = useCallback(() => {
     if (!event || selectedPhotoIndex === null) return;
-    setSelectedPhotoIndex(prev => prev !== null ? (prev - 1 + event.photoUrls.length) % event.photoUrls.length : null);
-  };
+    const prevIndex = (selectedPhotoIndex - 1 + event.photoUrls.length) % event.photoUrls.length;
+    setSelectedPhotoIndex(prevIndex);
+    setIsZoomed(false);
+  }, [event, selectedPhotoIndex]);
 
-  const totalPages = event ? Math.ceil(event.photoUrls.length / itemsPerPage) : 0;
-  const visiblePhotos = event ? event.photoUrls.slice(currentPage * itemsPerPage, (currentPage + 1) * itemsPerPage) : [];
-
-  const nextPage = () => {
-    if (event && currentPage < totalPages - 1) {
-      setCurrentPage(prev => prev + 1);
-    }
-  };
-
-  const prevPage = () => {
-    if (event && currentPage > 0) {
-      setCurrentPage(prev => prev - 1);
-    }
-  };
-
-  // Sync page when photo changes (e.g. via arrows in lightbox)
-  useEffect(() => {
-    if (selectedPhotoIndex !== null) {
-      const newPage = Math.floor(selectedPhotoIndex / itemsPerPage);
-      // Only update currentPage if the new photo is on a different page
-      // Use functional update to avoid stale closure issues with currentPage
-      setCurrentPage(current => {
-        if (newPage !== current) return newPage;
-        return current;
-      });
-    }
-  }, [selectedPhotoIndex, itemsPerPage]);
-
-  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (selectedPhotoIndex !== null) {
-        if (e.key === 'ArrowRight') nextPhoto();
-        if (e.key === 'ArrowLeft') prevPhoto();
-        if (e.key === 'Escape') setSelectedPhotoIndex(null);
-      } else {
-        if (e.key === 'ArrowRight') nextPage();
-        if (e.key === 'ArrowLeft') prevPage();
+      if (selectedPhotoIndex === null) return;
+      if (e.key === 'ArrowRight') nextPhoto();
+      if (e.key === 'ArrowLeft') prevPhoto();
+      if (e.key === 'Escape') {
+        setSelectedPhotoIndex(null);
+        setIsZoomed(false);
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedPhotoIndex, event, totalPages, currentPage]); // Include dependencies for correct closure values
+  }, [selectedPhotoIndex, nextPhoto, prevPhoto]);
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-dark grain overflow-hidden">
-        <div className="relative">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 1, ease: "easeOut" }}
-            className="flex flex-col items-center"
-          >
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, ease: "easeOut" }}
-              className="mb-8"
-            >
-              <img 
-                src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
-                alt="Deewy" 
-                className="h-24 md:h-32 w-auto object-contain"
-                referrerPolicy="no-referrer"
-              />
-            </motion.div>
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.4 }}
-              transition={{ delay: 0.5, duration: 1 }}
-              className="text-[10px] font-bold tracking-[1em] uppercase text-white mt-4 ml-4"
-            >
-              Visual Registry
-            </motion.div>
-          </motion.div>
-          
-          {/* Passive background elements */}
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              rotate: [0, 90, 0],
-              opacity: [0.1, 0.2, 0.1]
-            }}
-            transition={{ repeat: Infinity, duration: 10, ease: "linear" }}
-            className="absolute -top-40 -left-40 w-80 h-80 border border-white/10 rounded-full pointer-events-none"
+      <div className="min-h-screen flex items-center justify-center bg-[#0A0A0A] overflow-hidden">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="flex flex-col items-center"
+        >
+          <img 
+            src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+            alt="Deewy" 
+            className="h-24 w-auto object-contain mb-4 animate-pulse"
+            referrerPolicy="no-referrer"
           />
-          <motion.div 
-            animate={{ 
-              scale: [1.2, 1, 1.2],
-              rotate: [0, -90, 0],
-              opacity: [0.1, 0.2, 0.1]
-            }}
-            transition={{ repeat: Infinity, duration: 12, ease: "linear" }}
-            className="absolute -bottom-40 -right-40 w-80 h-80 border border-white/10 rounded-full pointer-events-none"
-          />
-        </div>
+          <div className="text-[10px] font-black tracking-[1em] uppercase text-white/20">Carregando</div>
+        </motion.div>
       </div>
     );
   }
 
   if (error || !event) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-dark p-6 text-center grain">
-        <div className="w-24 h-24 bg-white/5 text-primary rounded-full flex items-center justify-center mb-8 border border-white/10">
-          <X size={48} />
-        </div>
-        <h1 className="text-4xl font-black text-white mb-4 uppercase tracking-tighter">Acesso Negado</h1>
-        <p className="text-white/40 max-w-md font-medium">{error}</p>
-        <button 
-          onClick={() => window.location.href = window.location.origin}
-          className="mt-12 px-8 py-4 bg-white text-dark font-black uppercase tracking-widest text-xs rounded-full hover:bg-primary hover:text-white transition-all"
-        >
-          voltar ao HOME
-        </button>
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#0A0A0A] p-6 text-center">
+        <X size={48} className="text-red-500 mb-6" />
+        <h1 className="text-3xl font-black uppercase tracking-tighter text-white mb-2">Ops!</h1>
+        <p className="text-white/40 mb-8">{error}</p>
+        <a href="/" className="px-8 py-4 bg-white text-black font-black uppercase tracking-widest text-xs rounded-full">Voltar</a>
       </div>
     );
   }
 
-  const primaryColor = event.primaryColor || '#f0052d';
-  const secondaryColor = event.secondaryColor || '#090005';
+  const brandColor = '#f0052d';
 
   return (
-    <div className="min-h-screen bg-dark text-white selection:bg-white selection:text-dark grain overflow-x-hidden relative" style={{ '--primary': primaryColor } as any}>
-      {/* Passive Background Elements */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-        <motion.div 
-          animate={{ 
-            y: [0, -20, 0],
-            opacity: [0.05, 0.1, 0.05]
-          }}
-          transition={{ repeat: Infinity, duration: 8, ease: "easeInOut" }}
-          className="absolute top-[20%] -left-20 w-[40vw] h-[40vw] rounded-full bg-primary/20"
-        />
-        <motion.div 
-          animate={{ 
-            y: [0, 20, 0],
-            opacity: [0.05, 0.1, 0.05]
-          }}
-          transition={{ repeat: Infinity, duration: 10, ease: "easeInOut", delay: 1 }}
-          className="absolute bottom-[10%] -right-20 w-[30vw] h-[30vw] rounded-full bg-white/5"
-        />
-      </div>
-
+    <div className="min-h-screen bg-[#0A0A0A] text-white selection:bg-white selection:text-black overflow-x-hidden font-sans">
       {/* Editorial Header */}
-      <header className="relative h-screen flex flex-col justify-between p-8 md:p-16 overflow-hidden">
-        {/* Background Image with Parallax-like feel */}
+      <header className="relative h-[80vh] md:h-screen flex flex-col justify-between p-6 md:p-16 overflow-hidden">
         <motion.div 
-          initial={{ scale: 1.2, opacity: 0 }}
-          animate={{ scale: 1, opacity: 0.4 }}
-          transition={{ duration: 2, ease: "easeOut" }}
+          initial={{ scale: 1.1, opacity: 0 }}
+          animate={{ scale: 1, opacity: 0.3 }}
+          transition={{ duration: 1.5 }}
           className="absolute inset-0 z-0"
         >
-          <img 
-            src={event.photoUrls[0]} 
-            className="w-full h-full object-cover opacity-50"
-            alt=""
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-dark via-dark/40 to-dark" />
+          <img src={event.photoUrls[0] || "https://res.cloudinary.com/drguum0vj/image/upload/v1773269132/Deewy-04_bhpbnj.png"} className="w-full h-full object-cover" alt="" />
+          <div className="absolute inset-0 bg-gradient-to-b from-[#0A0A0A] via-transparent to-[#0A0A0A]" />
         </motion.div>
 
-        {/* Top Nav */}
-        <div className="relative z-10 flex justify-between items-start">
-          <div className="flex items-center gap-6">
-            <motion.a 
-              href="/"
-              initial={{ x: -20, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-all border border-white/10"
-              title="Voltar para o Início"
-            >
+        <nav className="relative z-10 flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <a href="/" className="w-12 h-12 bg-white/5 rounded-full flex items-center justify-center border border-white/10 hover:bg-white/10 transition-all">
               <Home size={20} />
-            </motion.a>
-            <div className="flex flex-col">
-              {event.logoUrl ? (
-              <motion.div
-                initial={{ x: -50, opacity: 0 }}
-                animate={{ x: 0, opacity: 1 }}
-                className="h-16 md:h-20"
-              >
-                <img src={event.logoUrl} alt={event.name} className="h-full w-auto object-contain" referrerPolicy="no-referrer" />
-              </motion.div>
-            ) : (
-              <>
-                <motion.div 
-                  initial={{ x: -50, opacity: 0 }}
-                  animate={{ x: 0, opacity: 1 }}
-                  className="h-10 md:h-12"
-                >
-                  <img 
-                    src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
-                    alt="Deewy" 
-                    className="h-full w-auto object-contain"
-                    referrerPolicy="no-referrer"
-                  />
-                </motion.div>
-              </>
-            )}
+            </a>
+            <a 
+              href="https://instagram.com/deewy.png" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hidden sm:flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all"
+            >
+              <Instagram size={16} className="text-primary" style={{ color: brandColor }} />
+              <span className="micro-label !text-white/60">@deewy.png</span>
+            </a>
           </div>
-        </div>
-        <motion.div 
-            initial={{ x: 50, opacity: 0 }}
-            animate={{ x: 0, opacity: 1 }}
-            className="flex items-center gap-4"
-          >
-            <div className="hidden md:block text-right">
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/40">Código do Evento</div>
-              <div className="text-sm font-mono font-bold" style={{ color: primaryColor }}>#{event.code}</div>
-            </div>
+          <img 
+            src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+            alt="Deewy" 
+            className="h-8 md:h-12 w-auto object-contain"
+            referrerPolicy="no-referrer"
+          />
+          <div className="flex items-center gap-3">
+            {event.driveLink && (
+              <a 
+                href={event.driveLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hidden md:flex items-center gap-2 px-6 py-3 bg-white text-black rounded-full font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all"
+              >
+                <Download size={14} /> Baixar Tudo
+              </a>
+            )}
             <button 
               onClick={() => {
-                navigator.share({ title: `Deewy - ${event.name}`, url: window.location.href }).catch(() => {});
+                if (navigator.share) {
+                  navigator.share({ title: event.name, url: window.location.href }).catch(() => {});
+                } else {
+                  // Fallback: copy to clipboard
+                  navigator.clipboard?.writeText(window.location.href).then(() => {
+                    setShowCopyFeedback(true);
+                    setTimeout(() => setShowCopyFeedback(false), 3000);
+                  }).catch(() => {
+                    // Silent fail or console log
+                  });
+                }
               }}
-              className="w-14 h-14 rounded-full border border-white/10 flex items-center justify-center hover:bg-white hover:text-dark transition-all"
+              className="flex items-center gap-2 px-4 md:px-6 h-12 bg-white/5 rounded-full border border-white/10 hover:bg-white/10 transition-all relative"
             >
-              <Share2 size={20} />
+              <Share2 size={18} />
+              <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Compartilhar Galeria</span>
+              
+              <AnimatePresence>
+                {showCopyFeedback && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="absolute -bottom-12 left-1/2 -translate-x-1/2 bg-white text-black px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap shadow-xl z-[100]"
+                  >
+                    Link Copiado!
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </button>
-          </motion.div>
-        </div>
-
-        {/* Hero Title */}
-        <div className="relative z-10 flex flex-col md:flex-row items-end justify-between gap-12">
-          <div className="max-w-4xl">
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4, duration: 0.8 }}
-            >
-              <div className="flex items-center gap-4 mb-8">
-                <div className="h-px w-20" style={{ backgroundColor: primaryColor }} />
-                <span className="text-xs font-black uppercase tracking-[0.3em]" style={{ color: primaryColor }}>Galeria Deewy</span>
-              </div>
-              <h1 className="text-7xl md:text-[12rem] font-black tracking-tighter uppercase leading-[0.8] mb-12">
-                {event.name.split(' ').map((word, i) => (
-                  <span key={i} className="block overflow-hidden">
-                    <motion.span 
-                      initial={{ y: '100%' }}
-                      animate={{ y: 0 }}
-                      transition={{ delay: 0.6 + (i * 0.1), duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-                      className="block"
-                    >
-                      {word}
-                    </motion.span>
-                  </span>
-                ))}
-              </h1>
-            </motion.div>
           </div>
-          
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1.2 }}
-            className="flex flex-col items-end gap-8 pb-4"
-          >
-            <div className="vertical-text text-[10px] font-black uppercase tracking-[0.5em] text-white/20 h-32">
-              Scroll to explore
-            </div>
-            <motion.div 
-              animate={{ y: [0, 10, 0] }}
-              transition={{ repeat: Infinity, duration: 2 }}
-              className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center"
-            >
-              <ArrowDown size={16} />
-            </motion.div>
-          </motion.div>
-        </div>
+        </nav>
 
-        {/* Bottom Info */}
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-t border-white/10 pt-8">
-          <div className="max-w-md hidden md:block">
-            <p className="text-base md:text-lg font-medium text-white/60 leading-relaxed">
+        <div className="relative z-10">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="h-px w-12 bg-primary" style={{ backgroundColor: brandColor }} />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary" style={{ color: brandColor }}>Bem-vindo à Galeria Deewy</span>
+            </div>
+            <h1 className="text-6xl md:text-[10rem] font-black tracking-tighter uppercase leading-[0.85] mb-8 break-words">
+              {event.name}
+            </h1>
+            <p className="text-white/60 max-w-lg text-sm md:text-lg font-medium leading-relaxed">
               {event.customText || 'Cada registro é uma cápsula do tempo. Explore sua galeria exclusiva e reviva seus melhores momentos.'}
             </p>
-          </div>
-          <div className="flex gap-6 md:gap-12 w-full md:w-auto justify-between md:justify-start">
+          </motion.div>
+        </div>
+
+        <div className="relative z-10 flex justify-between items-end border-t border-white/5 pt-8">
+          <div className="flex gap-8">
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1 md:mb-2">Total de Registros</div>
-              <div className="text-2xl md:text-4xl font-black">{event.photoUrls.length}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Registros</div>
+              <div className="text-2xl font-black">{event.photoUrls.length}</div>
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-white/20 mb-1 md:mb-2">Data de Criação</div>
-              <div className="text-2xl md:text-4xl font-black">{new Date(event.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
+              <div className="text-[9px] font-black uppercase tracking-widest text-white/20 mb-1">Data</div>
+              <div className="text-2xl font-black">{new Date(event.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}</div>
             </div>
           </div>
+          {event.driveLink && (
+            <a 
+              href={event.driveLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="md:hidden w-12 h-12 bg-primary text-white rounded-full flex items-center justify-center shadow-lg shadow-primary/20"
+            >
+              <Download size={20} />
+            </a>
+          )}
+          <motion.div 
+            animate={{ y: [0, 10, 0] }}
+            transition={{ repeat: Infinity, duration: 2 }}
+            className="w-10 h-10 rounded-full border border-white/10 flex items-center justify-center"
+          >
+            <ArrowDown size={16} className="text-white/40" />
+          </motion.div>
         </div>
       </header>
 
-      {/* Gallery Section */}
-      <section className="px-8 md:px-16 py-32 bg-dark">
-        {/* Controls */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-8 mb-20">
-          <div className="flex flex-col items-center md:items-start gap-2">
-            <h2 className="text-4xl font-black tracking-tighter uppercase">A <span style={{ color: primaryColor }}>Coleção</span></h2>
-            {isMobile && (
-              <div className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20">
-                {activeIndex + 1} / {event.photoUrls.length}
+      {/* Drive Link Section - Smart Design */}
+      {event.driveLink && (
+        <section className="px-6 md:px-16 py-12">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 group hover:border-primary/30 transition-all duration-500"
+          >
+            <div className="flex items-center gap-6">
+              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-2xl shadow-primary/10 group-hover:scale-110 transition-transform">
+                <ExternalLink size={32} />
               </div>
-            )}
-          </div>
-          {!isMobile && (
-            <div className="flex items-center gap-4 p-2 bg-white/5 rounded-full border border-white/10">
-              <button 
-                onClick={() => setViewMode('grid')}
-                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'grid' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
-              >
-                Grid
-              </button>
-              <button 
-                onClick={() => setViewMode('masonry')}
-                className={`px-6 py-2 rounded-full text-xs font-black uppercase tracking-widest transition-all ${viewMode === 'masonry' ? 'bg-white text-dark' : 'text-white/40 hover:text-white'}`}
-              >
-                Editorial
-              </button>
+              <div>
+                <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter mb-1">Problemas ao carregar?</h3>
+                <p className="text-white/40 text-sm font-medium">Acesse a pasta completa no Google Drive para baixar em alta resolução.</p>
+              </div>
             </div>
-          )}
+            <a 
+              href={event.driveLink} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="w-full md:w-auto px-10 py-5 bg-white text-black font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-primary hover:text-white transition-all text-center"
+            >
+              Acessar Google Drive
+            </a>
+          </motion.div>
+        </section>
+      )}
+
+      {/* Gallery Grid */}
+      <section className="px-4 md:px-16 py-12 md:py-20">
+        <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-6 mb-12 text-center md:text-left">
+          <div className="flex flex-col items-center md:items-start">
+            <div className="flex items-center justify-center md:justify-start gap-2 mb-2">
+              <Sparkles size={14} className="text-primary" style={{ color: brandColor }} />
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Sua Seleção</span>
+            </div>
+            <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter">A <span className="text-primary" style={{ color: brandColor }}>Coleção</span></h2>
+          </div>
+          <div className="text-[10px] font-black uppercase tracking-widest text-white/20 bg-white/5 px-4 py-2 rounded-full border border-white/10">
+            {event.photoUrls.length} Registros Encontrados
+          </div>
         </div>
 
-        {/* Photo Grid with Pagination */}
-        <div className="relative">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={isMobile ? 'mobile-scroll' : currentPage}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              onScroll={handleScroll}
-              className={`
-                ${isMobile 
-                  ? 'flex overflow-x-auto snap-x snap-mandatory gap-6 pb-8 no-scrollbar -mx-8 px-8 scroll-smooth' 
-                  : `grid gap-6 md:gap-8 ${viewMode === 'grid' ? 'grid-cols-5' : 'grid-cols-12'}`
-                }
-              `}
-            >
-              {(isMobile ? event.photoUrls : visiblePhotos).map((url, index) => {
-                const globalIndex = isMobile ? index : (currentPage * itemsPerPage + index);
-                const isEditorial = viewMode === 'masonry' && !isMobile;
-                const isLarge = isEditorial && globalIndex % 7 === 0;
-                const isTall = isEditorial && (globalIndex % 7 === 2 || globalIndex % 7 === 5);
-                const isWide = isEditorial && globalIndex % 7 === 4;
-
-                const shouldLoad = !isMobile || globalIndex <= maxLoadedIndex;
-
-                return (
-                  <motion.div
-                    key={globalIndex}
-                    initial={{ opacity: 0, scale: 0.95 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ duration: 0.4, delay: isMobile ? 0 : index * 0.1 }}
-                    className={`
-                      relative group overflow-hidden rounded-[2rem] bg-white/5 cursor-pointer flex-shrink-0
-                      ${isMobile ? 'w-[85vw] aspect-[3/4] snap-center' : 
-                        !isEditorial ? 'aspect-[3/4]' : 
-                        isLarge ? 'col-span-12 md:col-span-8 row-span-2 aspect-video md:aspect-auto' : 
-                        isTall ? 'col-span-6 md:col-span-4 row-span-2 aspect-[3/5]' :
-                        isWide ? 'col-span-12 md:col-span-8 aspect-video' :
-                        'col-span-6 md:col-span-4 aspect-[3/4]'}
-                    `}
-                    onClick={() => setSelectedPhotoIndex(globalIndex)}
-                  >
-                    {shouldLoad && (
-                      <img 
-                        src={url} 
-                        className={`w-full h-full object-cover transition-transform duration-1000 ${isMobile ? '' : 'group-hover:scale-110'}`}
-                        alt={`Registro ${globalIndex + 1}`}
-                        loading="lazy"
-                      />
-                    )}
-                  
-                  <div className="absolute top-4 left-4 md:top-6 md:left-6 z-10 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                    <div className="flex items-center gap-2 px-2 py-1 md:px-3 md:py-1.5 bg-dark/60 rounded-full border border-white/10">
-                      <Camera size={10} className="text-primary md:w-3 md:h-3" />
-                      <span className="text-[7px] md:text-[8px] font-black uppercase tracking-widest hidden md:inline">Captured by Deewy</span>
-                    </div>
-                  </div>
-
-                  <div className="absolute inset-0 bg-gradient-to-t from-dark/80 via-transparent to-transparent opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity flex flex-col justify-end p-4 md:p-8">
-                    <div className="flex items-center justify-between">
-                      <div className="text-[10px] md:text-xs font-black uppercase tracking-widest">Registro #{globalIndex + 1}</div>
-                      <button 
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDownload(url, `deewy-${event.name}-${globalIndex}.jpg`);
-                        }}
-                        className="w-10 h-10 md:w-12 md:h-12 bg-white text-dark rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all shadow-xl"
-                      >
-                        <Download size={16} className="md:w-4.5 md:h-4.5" />
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              );
-            })}
-          </motion.div>
-        </AnimatePresence>
-
-        {/* Pagination Controls */}
-        {totalPages > 1 && !isMobile && (
-          <div className="flex flex-col items-center gap-6 mt-20">
-            <div className="flex items-center gap-8">
-              <button 
-                onClick={prevPage}
-                disabled={currentPage === 0}
-                className={`w-14 h-14 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === 0 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white hover:text-dark'}`}
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 md:gap-6">
+          {event.photoUrls.slice(0, visibleChunks * CHUNK_SIZE).map((url, index) => {
+            const chunkIndex = Math.floor(index / CHUNK_SIZE);
+            const isCurrentChunk = selectedPhotoIndex !== null && Math.floor(selectedPhotoIndex / CHUNK_SIZE) === chunkIndex;
+            
+            return (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "200px" }}
+                transition={{ delay: (index % 5) * 0.1 }}
+                className={`relative group aspect-[3/4] overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white/5 cursor-pointer border border-white/5 transition-all duration-700 ${
+                  selectedPhotoIndex !== null && !isCurrentChunk ? 'opacity-20 blur-[2px] scale-95' : 'opacity-100 blur-0 scale-100'
+                }`}
+                onClick={() => {
+                  setSelectedPhotoIndex(index);
+                  setIsZoomed(false);
+                }}
               >
-                <ChevronLeft size={24} />
-              </button>
-              
-              <div className="flex flex-col items-center">
-                <div className="text-[10px] font-black uppercase tracking-[0.4em] text-white/20 mb-2">Página</div>
-                <div className="text-xl font-black">
-                  {currentPage + 1} <span className="text-white/20 mx-2">/</span> {totalPages}
+                <img 
+                  src={url} 
+                  className="w-full h-full object-cover transition-transform duration-1000 group-hover:scale-110" 
+                  alt="" 
+                  loading="lazy"
+                />
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-500 flex flex-col justify-end p-4 md:p-6">
+                  <div className="flex justify-between items-center translate-y-4 group-hover:translate-y-0 transition-transform duration-500">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-white/80">#{index + 1}</span>
+                    <div className="w-8 h-8 md:w-10 md:h-10 bg-white text-black rounded-full flex items-center justify-center hover:bg-primary hover:text-white transition-all">
+                      <Download size={14} />
+                    </div>
+                  </div>
                 </div>
-              </div>
+              </motion.div>
+            );
+          })}
+        </div>
 
-              <button 
-                onClick={nextPage}
-                disabled={currentPage === totalPages - 1}
-                className={`w-14 h-14 rounded-full border border-white/10 flex items-center justify-center transition-all ${currentPage === totalPages - 1 ? 'opacity-20 cursor-not-allowed' : 'hover:bg-white hover:text-dark'}`}
-              >
-                <ChevronRight size={24} />
-              </button>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-48 h-1 bg-white/5 rounded-full overflow-hidden">
-              <motion.div 
-                initial={false}
-                animate={{ width: `${((currentPage + 1) / totalPages) * 100}%` }}
-                className="h-full bg-primary"
-              />
-            </div>
+        {/* Load More Button */}
+        {visibleChunks * CHUNK_SIZE < event.photoUrls.length && (
+          <div className="mt-16 flex justify-center">
+            <button
+              onClick={() => setVisibleChunks(prev => prev + 1)}
+              className="px-12 py-5 bg-white/5 border border-white/10 rounded-full text-[10px] font-black uppercase tracking-[0.3em] hover:bg-white hover:text-black transition-all duration-500 group"
+            >
+              Carregar <span className="text-primary group-hover:text-black" style={{ color: brandColor }}>Mais {CHUNK_SIZE}</span>
+            </button>
           </div>
         )}
-      </div>
       </section>
 
-      {/* Brand Section */}
-      <section className="py-40 px-8 text-center bg-dark relative overflow-hidden">
-        <motion.div 
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 20, ease: "linear" }}
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] border border-white/5 rounded-full pointer-events-none"
-        />
-        <div className="relative z-10">
-          <Camera className="mx-auto mb-12" size={48} style={{ color: primaryColor }} />
-          <h2 className="text-5xl md:text-8xl font-black tracking-tighter uppercase mb-8 leading-[0.9] px-4">
-            Momentos <br /> <span style={{ color: primaryColor }}>Eternizados</span>
-          </h2>
-          <p className="text-white/40 max-w-xl mx-auto font-medium text-base md:text-lg mb-16 px-6 hidden md:block">
-            A Deewy acredita que cada clique é uma obra de arte. Obrigado por nos deixar fazer parte da sua história.
-          </p>
-          <div className="flex flex-col items-center">
-            <img 
-              src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
-              alt="Deewy" 
-              className="h-12 md:h-16 w-auto object-contain mb-4"
-              referrerPolicy="no-referrer"
-            />
-            <div className="text-[10px] font-bold tracking-[0.5em] uppercase text-white/20">Registro Visual</div>
-          </div>
+      {/* Footer Branding */}
+      <footer className="py-24 md:py-40 px-6 text-center border-t border-white/5 bg-gradient-to-b from-transparent to-white/[0.02]">
+        <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-white/5 border border-white/10 mb-8">
+          <Camera className="text-primary" size={32} style={{ color: brandColor }} />
         </div>
-      </section>
+        <h2 className="text-4xl md:text-7xl font-black uppercase tracking-tighter mb-12 leading-none">
+          Momentos <br /> <span className="text-primary" style={{ color: brandColor }}>Eternizados</span>
+        </h2>
+        <div className="space-y-6">
+          <img 
+            src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267564/Deewy_zpnbng.png" 
+            alt="Deewy" 
+            className="h-8 md:h-12 mx-auto opacity-30"
+            referrerPolicy="no-referrer"
+          />
+          <div className="flex justify-center gap-8">
+            <a href="https://instagram.com/deewy.png" target="_blank" rel="noreferrer" className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors">Instagram</a>
+            <a href="/" className="text-[10px] font-black uppercase tracking-widest text-white/20 hover:text-primary transition-colors">Portfolio</a>
+          </div>
+          <p className="text-[9px] font-black uppercase tracking-[0.8em] text-white/10">Visual Registry &copy; 2026</p>
+        </div>
+      </footer>
 
       {/* Lightbox */}
       <AnimatePresence>
@@ -683,119 +408,177 @@ export default function ClientView({ code }: { code: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className={`fixed inset-0 z-50 bg-dark/98 flex flex-col ${isMobile ? '' : 'backdrop-blur-md grain'}`}
+            className="fixed inset-0 z-[1000] bg-black/98 backdrop-blur-2xl flex flex-col"
           >
-            {/* Lightbox Header - Transparent Bar */}
-            <div className="h-[70px] md:h-[90px] px-4 md:px-6 flex items-center justify-between bg-transparent z-30 border-b border-white/5">
-              <div className="flex items-center gap-4">
-                <img 
-                  src="https://res.cloudinary.com/drguum0vj/image/upload/v1773267528/Deewy-05_kn9ukp.jpg" 
-                  alt="Deewy Logo" 
-                  className="w-8 h-8 md:w-10 md:h-10 rounded-full object-cover border border-white/10"
-                  referrerPolicy="no-referrer"
-                />
-                <div className="h-4 w-px bg-white/10" />
+            {/* Lightbox Header */}
+            <div className="p-4 md:p-8 flex justify-between items-center relative z-10">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-[0.3em] text-primary mb-1" style={{ color: brandColor }}>{event.name}</span>
                 <div className="text-[10px] font-black uppercase tracking-widest text-white/40">
-                  {selectedPhotoIndex + 1} / {event.photoUrls.length}
+                  Registro {selectedPhotoIndex + 1} de {event.photoUrls.length}
                 </div>
               </div>
-              <div className="flex items-center gap-3 md:gap-6">
+              
+              <div className="flex items-center gap-2 md:gap-4">
                 {!isMobile && (
                   <button 
-                    onClick={toggleZoom}
-                    className={`flex items-center gap-2 md:gap-3 px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] transition-all ${zoomScale > 1 ? 'bg-primary text-white' : 'bg-white/10 text-white hover:bg-white/20'}`}
+                    onClick={() => setIsZoomed(!isZoomed)}
+                    className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/10 text-white rounded-full hover:bg-white/20 transition-all"
+                    title={isZoomed ? "Reduzir" : "Zoom"}
                   >
-                    <Maximize2 size={14} className="md:w-4 md:h-4" /> 
-                    <span className="hidden sm:inline">{zoomScale > 1 ? 'Reduzir' : 'Zoom'}</span>
+                    {isZoomed ? <ZoomOut size={20} /> : <ZoomIn size={20} />}
                   </button>
                 )}
                 <button 
-                  onClick={() => handleDownload(event.photoUrls[selectedPhotoIndex], `deewy-${event.name}-${selectedPhotoIndex}.jpg`)}
-                  className="flex items-center gap-2 md:gap-3 bg-white text-dark px-4 md:px-8 py-2 md:py-3 rounded-full font-black uppercase tracking-widest text-[8px] md:text-[10px] hover:bg-primary hover:text-white transition-all"
+                  onClick={() => handleDownload(event.photoUrls[selectedPhotoIndex], `deewy-${selectedPhotoIndex}.jpg`)}
+                  className="h-10 md:h-12 px-4 md:px-8 bg-white text-black rounded-full font-black uppercase tracking-widest text-[9px] md:text-[10px] flex items-center gap-2 hover:bg-primary hover:text-white transition-all"
                 >
-                  <Download size={14} className="md:w-4 md:h-4" /> <span className="hidden sm:inline">Download</span>
+                  <Download size={14} /> <span className="hidden sm:inline">Download</span>
                 </button>
                 <button 
-                  onClick={() => setSelectedPhotoIndex(null)}
-                  className="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center hover:bg-white/10 rounded-full transition-colors"
+                  onClick={() => {
+                    setSelectedPhotoIndex(null);
+                    setIsZoomed(false);
+                  }}
+                  className="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-white/10 text-white rounded-full hover:bg-red-500 transition-all"
                 >
-                  <X size={24} className="md:w-8 md:h-8" />
+                  <X size={20} />
                 </button>
               </div>
             </div>
 
-            {/* Lightbox Image Viewport */}
-            <div 
-              className="flex-1 relative flex items-center justify-center overflow-hidden cursor-move touch-none"
-              onClick={resetZoom}
-              onWheel={handleWheel}
-              onTouchMove={handleTouchMove}
-              onTouchEnd={handleTouchEnd}
-              ref={constraintsRef}
-            >
-              {zoomScale === 1 && (
-                <>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                    className="absolute left-4 md:left-8 z-20 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
-                  >
-                    <ChevronLeft size={32} className="md:w-12 md:h-12" />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                    className="absolute right-4 md:right-8 z-20 w-12 h-12 md:w-20 md:h-20 flex items-center justify-center text-white/20 hover:text-white hover:bg-white/5 rounded-full transition-all"
-                  >
-                    <ChevronRight size={32} className="md:w-12 md:h-12" />
-                  </button>
-                </>
+            {/* Main Viewer */}
+            <div className="flex-1 relative flex items-center justify-center p-2 md:p-10 overflow-hidden">
+              {CHUNK_SIZE > 1 && (
+                <button 
+                  onClick={prevPhoto}
+                  className="absolute left-4 md:left-8 z-10 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-white/5 text-white rounded-full hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md"
+                >
+                  <ChevronLeft size={24} />
+                </button>
               )}
               
-              <motion.img 
+              <motion.div
                 key={selectedPhotoIndex}
-                style={{ x, y }}
-                initial={{ opacity: 0, scale: isMobile ? 1 : 0.98 }}
-                animate={{ 
-                  opacity: 1, 
-                  scale: zoomScale,
-                }}
-                transition={isMobile ? { duration: 0.2 } : { type: "spring", stiffness: 300, damping: 30 }}
-                drag={zoomScale > 1 ? true : (isMobile ? "x" : false)}
-                dragConstraints={zoomScale > 1 ? dragConstraints : { left: 0, right: 0 }}
-                dragElastic={isMobile && zoomScale === 1 ? 0.2 : 0}
+                initial={{ opacity: 0, x: 50, scale: 0.95 }}
+                animate={{ opacity: 1, x: 0, scale: 1 }}
+                exit={{ opacity: 0, x: -50, scale: 0.95 }}
+                drag="x"
+                dragConstraints={{ left: 0, right: 0 }}
+                dragElastic={0.2}
                 onDragEnd={(_, info) => {
-                  if (zoomScale === 1 && isMobile) {
-                    const threshold = 30; // Reduced threshold for easier swiping
-                    if (info.offset.x < -threshold) nextPhoto();
-                    else if (info.offset.x > threshold) prevPhoto();
-                  }
+                  if (info.offset.x > 100) prevPhoto();
+                  else if (info.offset.x < -100) nextPhoto();
                 }}
-                onDoubleClick={(e) => { e.stopPropagation(); if (!isMobile) toggleZoom(); }}
-                onClick={(e) => e.stopPropagation()}
-                onLoad={handleImageLoad}
-                src={event.photoUrls[selectedPhotoIndex]} 
-                className="max-w-full max-h-full object-contain"
-                alt=""
-              />
+                transition={{ type: "spring", damping: 25, stiffness: 200 }}
+                className={`w-full h-full flex items-center justify-center ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
+                onClick={() => !isMobile && setIsZoomed(!isZoomed)}
+              >
+                <img 
+                  src={event.photoUrls[selectedPhotoIndex]} 
+                  className={`max-w-full max-h-full object-contain shadow-[0_50px_100px_rgba(0,0,0,0.5)] rounded-lg md:rounded-2xl transition-transform duration-500 ${isZoomed ? 'scale-[1.8]' : 'scale-100'}`} 
+                  alt=""
+                />
+              </motion.div>
+
+              {CHUNK_SIZE > 1 && (
+                <button 
+                  onClick={nextPhoto}
+                  className="absolute right-4 md:right-8 z-10 w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-white/5 text-white rounded-full hover:bg-white/10 transition-all border border-white/10 backdrop-blur-md"
+                >
+                  <ChevronRight size={24} />
+                </button>
+              )}
             </div>
 
-            {/* Thumbnails - Transparent Bar (Current Page Only) */}
-            {!isMobile && (
-              <div className="h-[100px] md:h-[140px] px-4 md:px-6 overflow-x-auto flex items-center justify-center gap-3 md:gap-4 no-scrollbar bg-transparent z-30 border-t border-white/5">
-                {visiblePhotos.map((url, i) => {
-                  const globalIndex = currentPage * itemsPerPage + i;
+            {/* Thumbnails Strip (Sliding Window) */}
+            <div className="p-4 md:p-8 bg-black/40 border-t border-white/5 backdrop-blur-md overflow-hidden">
+              <div className="max-w-6xl mx-auto flex justify-center items-center gap-2 md:gap-4">
+                {event.photoUrls.slice(
+                  Math.max(0, selectedPhotoIndex - 4),
+                  Math.min(event.photoUrls.length, selectedPhotoIndex + 5)
+                ).map((url, i) => {
+                  const actualIndex = Math.max(0, selectedPhotoIndex - 4) + i;
+                  const isActive = actualIndex === selectedPhotoIndex;
+                  const chunkIndex = Math.floor(actualIndex / CHUNK_SIZE);
+                  const currentChunkIndex = Math.floor(selectedPhotoIndex / CHUNK_SIZE);
+                  const isSameChunk = chunkIndex === currentChunkIndex;
+
                   return (
-                    <button 
-                      key={globalIndex}
-                      onClick={() => setSelectedPhotoIndex(globalIndex)}
-                      className={`w-12 h-16 md:w-16 md:h-20 rounded-lg md:rounded-xl overflow-hidden flex-shrink-0 border-2 transition-all duration-500 ${selectedPhotoIndex === globalIndex ? 'border-primary scale-110 shadow-2xl shadow-primary/20' : 'border-transparent opacity-20 hover:opacity-50'}`}
+                    <motion.div
+                      key={actualIndex}
+                      layout
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => {
+                        setSelectedPhotoIndex(actualIndex);
+                        setIsZoomed(false);
+                      }}
+                      className={`
+                        relative aspect-[3/4] w-12 md:w-20 rounded-lg md:rounded-xl overflow-hidden cursor-pointer transition-all duration-500
+                        ${isActive ? 'ring-2 ring-primary scale-110 z-10 shadow-lg shadow-primary/20 opacity-100 blur-0' : 
+                          isSameChunk ? 'opacity-60 grayscale-0 blur-0' : 'opacity-20 grayscale blur-[1px]'}
+                      `}
                     >
-                      <img src={url} className="w-full h-full object-cover" alt="" loading="lazy" />
-                    </button>
+                      <img src={url} className="w-full h-full object-cover" alt="" />
+                    </motion.div>
                   );
                 })}
               </div>
-            )}
+            </div>
           </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Instagram Popup */}
+      <AnimatePresence>
+        {showInstaPopup && (
+          <div className="fixed inset-0 z-[200] flex items-end md:items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => { setShowInstaPopup(false); setHasClosedPopup(true); }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ opacity: 0, y: 100, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 100, scale: 0.9 }}
+              className="relative w-full max-w-sm bg-[#111111] border border-white/10 rounded-[2.5rem] p-8 shadow-2xl overflow-hidden"
+            >
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045]" />
+              
+              <div className="flex flex-col items-center text-center">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-0.5 mb-6">
+                  <div className="w-full h-full bg-[#111111] rounded-[calc(1.5rem-2px)] flex items-center justify-center">
+                    <Instagram size={40} className="text-white" />
+                  </div>
+                </div>
+                
+                <h3 className="text-2xl font-black uppercase tracking-tighter mb-2">Gostou dos registros?</h3>
+                <p className="text-white/40 text-sm font-medium mb-8">Siga <span className="text-white font-bold">@deewy.png</span> no Instagram para acompanhar as novidades e bastidores.</p>
+                
+                <div className="w-full space-y-3">
+                  <a 
+                    href="https://instagram.com/deewy.png" 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    onClick={() => { setShowInstaPopup(false); setHasClosedPopup(true); }}
+                    className="flex items-center justify-center gap-3 w-full py-4 bg-white text-black font-black uppercase tracking-widest text-[10px] rounded-2xl hover:bg-primary hover:text-white transition-all"
+                  >
+                    Seguir
+                  </a>
+                  <button 
+                    onClick={() => { setShowInstaPopup(false); setHasClosedPopup(true); }}
+                    className="w-full py-4 text-white/20 hover:text-white/40 font-black uppercase tracking-widest text-[10px] transition-all"
+                  >
+                    Perder as novidades
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
     </div>
