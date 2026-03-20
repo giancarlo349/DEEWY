@@ -11,6 +11,7 @@ const LOGO_WITH_NAME = "https://res.cloudinary.com/drguum0vj/image/upload/v17732
 export default function HomeView() {
   const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [portfolio, setPortfolio] = useState<PortfolioData | null>(null);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
@@ -22,6 +23,12 @@ export default function HomeView() {
   const marqueeX = useTransform(smoothProgress, [0, 1], [0, -500]);
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+
     const portfolioRef = ref(db, 'public_portfolio');
     const unsubscribe = onValue(portfolioRef, (snapshot) => {
       const data = snapshot.val();
@@ -35,7 +42,9 @@ export default function HomeView() {
     });
 
     const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({ x: e.clientX / window.innerWidth - 0.5, y: e.clientY / window.innerHeight - 0.5 });
+      if (window.innerWidth >= 1024) {
+        setMousePos({ x: e.clientX / window.innerWidth - 0.5, y: e.clientY / window.innerHeight - 0.5 });
+      }
     };
 
     window.addEventListener('mousemove', handleMouseMove);
@@ -43,6 +52,7 @@ export default function HomeView() {
     return () => {
       unsubscribe();
       window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('resize', checkMobile);
     };
   }, []);
 
@@ -126,19 +136,21 @@ export default function HomeView() {
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      className="relative bg-bg text-white grain selection:bg-primary selection:text-white font-sans overflow-x-hidden"
+      className={`relative bg-bg text-white ${!isMobile ? 'grain' : ''} selection:bg-primary selection:text-white font-sans overflow-x-hidden`}
     >
-      {/* Immersive Cursor Glow */}
-      <motion.div 
-        className="fixed w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-0"
-        animate={{ 
-          x: mousePos.x * 200, 
-          y: mousePos.y * 200,
-          left: '50%',
-          top: '50%',
-          transform: 'translate(-50%, -50%)'
-        }}
-      />
+      {/* Immersive Cursor Glow - Disabled on Mobile */}
+      {!isMobile && (
+        <motion.div 
+          className="fixed w-[600px] h-[600px] bg-primary/5 blur-[120px] rounded-full pointer-events-none z-0"
+          animate={{ 
+            x: mousePos.x * 200, 
+            y: mousePos.y * 200,
+            left: '50%',
+            top: '50%',
+            transform: 'translate(-50%, -50%)'
+          }}
+        />
+      )}
 
       {/* Navigation */}
       <nav className="fixed top-0 left-0 right-0 z-[100] px-6 md:px-16 py-6 md:py-8 flex justify-between items-center mix-blend-difference">
@@ -172,44 +184,52 @@ export default function HomeView() {
 
       {/* Extravagant Hero */}
       <section className="relative h-screen flex items-center justify-center overflow-hidden bg-bg">
-        {/* Abstract Background Effects */}
+        {/* Abstract Background Effects - Simplified on Mobile */}
         <div className="absolute inset-0 z-0">
-          <motion.div 
-            animate={{ 
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-              x: mousePos.x * 50,
-              y: mousePos.y * 50
-            }}
-            transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
-            className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/10 blur-[150px] rounded-full"
-          />
-          <motion.div 
-            animate={{ 
-              scale: [1.2, 1, 1.2],
-              opacity: [0.2, 0.4, 0.2],
-              x: mousePos.x * -50,
-              y: mousePos.y * -50
-            }}
-            transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
-            className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-white/5 blur-[120px] rounded-full"
-          />
+          {!isMobile && (
+            <>
+              <motion.div 
+                animate={{ 
+                  scale: [1, 1.2, 1],
+                  opacity: [0.3, 0.5, 0.3],
+                  x: mousePos.x * 50,
+                  y: mousePos.y * 50
+                }}
+                transition={{ duration: 10, repeat: Infinity, ease: "linear" }}
+                className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-primary/10 blur-[150px] rounded-full"
+              />
+              <motion.div 
+                animate={{ 
+                  scale: [1.2, 1, 1.2],
+                  opacity: [0.2, 0.4, 0.2],
+                  x: mousePos.x * -50,
+                  y: mousePos.y * -50
+                }}
+                transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+                className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-white/5 blur-[120px] rounded-full"
+              />
+            </>
+          )}
           
-          {/* Geometric Accents */}
-          <div className="absolute inset-0 opacity-20">
+          {/* Geometric Accents - Reduced on Mobile */}
+          <div className="absolute inset-0 opacity-10 md:opacity-20">
             <div className="absolute top-1/2 left-0 w-full h-px bg-gradient-to-r from-transparent via-white/20 to-transparent" />
             <div className="absolute top-0 left-1/2 w-px h-full bg-gradient-to-b from-transparent via-white/20 to-transparent" />
             
-            <motion.div 
-              animate={{ rotate: 360 }}
-              transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vh] h-[80vh] border border-white/5 rounded-full"
-            />
-            <motion.div 
-              animate={{ rotate: -360 }}
-              transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vh] h-[60vh] border border-white/5 rounded-full border-dashed"
-            />
+            {!isMobile && (
+              <>
+                <motion.div 
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 60, repeat: Infinity, ease: "linear" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[80vh] h-[80vh] border border-white/5 rounded-full"
+                />
+                <motion.div 
+                  animate={{ rotate: -360 }}
+                  transition={{ duration: 40, repeat: Infinity, ease: "linear" }}
+                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60vh] h-[60vh] border border-white/5 rounded-full border-dashed"
+                />
+              </>
+            )}
           </div>
         </div>
 
@@ -311,13 +331,13 @@ export default function HomeView() {
         </div>
       </section>
 
-      {/* Marquee Section */}
+      {/* Marquee Section - Simplified on Mobile */}
       <div className="py-12 md:py-20 bg-white/[0.02] border-y border-white/5 overflow-hidden">
         <div className="flex whitespace-nowrap">
           <motion.div 
-            animate={{ x: ["0%", "-50%"] }}
+            animate={!isMobile ? { x: ["0%", "-50%"] } : {}}
             transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-            className="flex gap-10 md:gap-20 items-center pr-10 md:pr-20"
+            className={`flex gap-10 md:gap-20 items-center pr-10 md:pr-20 ${isMobile ? 'overflow-x-auto no-scrollbar' : ''}`}
           >
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <div key={i} className="flex gap-10 md:gap-20 items-center">
@@ -370,13 +390,14 @@ export default function HomeView() {
                     <img 
                       src={img.url} 
                       alt={img.title} 
-                      className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-110"
+                      className={`w-full h-full object-cover ${!isMobile ? 'grayscale group-hover:grayscale-0' : ''} transition-all duration-1000 group-hover:scale-110`}
                       referrerPolicy="no-referrer"
+                      loading="lazy"
                     />
-                    <div className="absolute inset-0 bg-bg/60 opacity-0 group-hover:opacity-100 transition-all duration-700 flex flex-col items-center justify-center backdrop-blur-md">
+                    <div className={`absolute inset-0 bg-bg/60 opacity-0 group-hover:opacity-100 transition-all duration-700 flex flex-col items-center justify-center ${!isMobile ? 'backdrop-blur-md' : ''}`}>
                       <motion.div 
-                        initial={{ scale: 0.8, opacity: 0 }}
-                        whileHover={{ scale: 1, opacity: 1 }}
+                        initial={!isMobile ? { scale: 0.8, opacity: 0 } : { opacity: 1 }}
+                        whileHover={!isMobile ? { scale: 1, opacity: 1 } : {}}
                         className="w-16 h-16 md:w-24 md:h-24 glass rounded-full flex items-center justify-center"
                       >
                         <span className="micro-label !text-white">Ver</span>
@@ -505,24 +526,24 @@ export default function HomeView() {
       {/* Lightbox */}
       <AnimatePresence>
         {selectedPhoto && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[10001] bg-bg/98 backdrop-blur-3xl flex items-center justify-center p-6 md:p-20"
-            onClick={() => setSelectedPhoto(null)}
-          >
-            <button className="absolute top-10 right-10 text-white/20 hover:text-white transition-colors">
-              <X size={48} />
-            </button>
-            <motion.img 
-              initial={{ scale: 0.9, y: 50 }}
-              animate={{ scale: 1, y: 0 }}
-              src={selectedPhoto} 
-              className="max-w-full max-h-full object-contain rounded-[4rem] border border-white/10 shadow-[0_80px_160px_rgba(0,0,0,0.9)]"
-              referrerPolicy="no-referrer"
-            />
-          </motion.div>
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className={`fixed inset-0 z-[10001] bg-bg/98 ${!isMobile ? 'backdrop-blur-3xl' : ''} flex items-center justify-center p-6 md:p-20`}
+              onClick={() => setSelectedPhoto(null)}
+            >
+              <button className="absolute top-6 right-6 md:top-10 md:right-10 text-white/20 hover:text-white transition-colors">
+                <X size={isMobile ? 32 : 48} />
+              </button>
+              <motion.img 
+                initial={!isMobile ? { scale: 0.9, y: 50 } : { opacity: 0 }}
+                animate={!isMobile ? { scale: 1, y: 0 } : { opacity: 1 }}
+                src={selectedPhoto} 
+                className="max-w-full max-h-full object-contain rounded-[2rem] md:rounded-[4rem] border border-white/10 shadow-[0_80px_160px_rgba(0,0,0,0.9)]"
+                referrerPolicy="no-referrer"
+              />
+            </motion.div>
         )}
       </AnimatePresence>
     </motion.div>

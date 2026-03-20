@@ -344,8 +344,8 @@ export default function ClientView({ code }: { code: string }) {
                 viewport={{ once: true, margin: "200px" }}
                 transition={{ duration: 0.4 }}
                 className={`relative group aspect-[3/4] overflow-hidden rounded-2xl md:rounded-[2.5rem] bg-white/5 cursor-pointer border border-white/5 transition-all duration-500 ${
-                  !isFocused ? 'opacity-20 grayscale scale-95' : 'opacity-100 grayscale-0 scale-100'
-                }`}
+                  !isFocused ? 'opacity-20' : 'opacity-100'
+                } ${!isMobile && !isFocused ? 'grayscale scale-95' : ''} ${!isMobile && isFocused ? 'grayscale-0 scale-100' : ''}`}
                 onClick={() => {
                   setFocusedChunkIndex(chunkIndex);
                   setSelectedPhotoIndex(index);
@@ -432,7 +432,7 @@ export default function ClientView({ code }: { code: string }) {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[1000] bg-black/98 backdrop-blur-2xl flex flex-col"
+            className={`fixed inset-0 z-[1000] bg-black/98 ${!isMobile ? 'backdrop-blur-2xl' : ''} flex flex-col`}
           >
             {/* Lightbox Header */}
             <div className="p-4 md:p-8 flex justify-between items-center relative z-10">
@@ -527,7 +527,7 @@ export default function ClientView({ code }: { code: string }) {
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => { setShowInstaPopup(false); setHasClosedPopup(true); }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              className={`absolute inset-0 bg-black/60 ${!isMobile ? 'backdrop-blur-sm' : ''}`}
             />
             <motion.div 
               initial={{ opacity: 0, y: 100, scale: 0.9 }}
