@@ -1,8 +1,9 @@
 import { useState, useEffect, useRef, SyntheticEvent, UIEvent, useCallback } from 'react';
+import { jsPDF } from 'jspdf';
 import { db } from '../firebase';
 import { ref, onValue } from 'firebase/database';
 import { motion, AnimatePresence } from 'motion/react';
-import { Download, X, ChevronLeft, ChevronRight, Share2, Camera, ArrowDown, Home, Instagram, ExternalLink, Sparkles, ZoomIn, ZoomOut } from 'lucide-react';
+import { Download, X, ChevronLeft, ChevronRight, Share2, Camera, ArrowDown, Home, Instagram, ExternalLink, Sparkles, ZoomIn, ZoomOut, FileText, CheckCircle2 } from 'lucide-react';
 import { PhotoEvent } from '../types';
 
 export default function ClientView({ code }: { code: string }) {
@@ -19,6 +20,7 @@ export default function ClientView({ code }: { code: string }) {
   const [focusedChunkIndex, setFocusedChunkIndex] = useState(0);
 
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
+  const [showTipsGuide, setShowTipsGuide] = useState(false);
 
   const CHUNK_SIZE = isMobile ? 2 : 5;
 
@@ -81,6 +83,115 @@ export default function ClientView({ code }: { code: string }) {
       window.URL.revokeObjectURL(blobUrl);
     } catch (err) {
       window.open(url, '_blank');
+    }
+  };
+
+  const downloadTips = async () => {
+    try {
+      const doc = new jsPDF();
+      const logoUrl = 'https://res.cloudinary.com/drguum0vj/image/upload/v1773268492/Deewy-04_bhpbnj.png';
+      
+      // Helper to add image to PDF
+      const addImageFromUrl = (url: string): Promise<void> => {
+        return new Promise((resolve) => {
+          const img = new Image();
+          img.crossOrigin = 'Anonymous';
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            if (ctx) {
+              ctx.drawImage(img, 0, 0);
+              const dataUrl = canvas.toDataURL('image/png');
+              doc.addImage(dataUrl, 'PNG', 85, 10, 40, 40);
+            }
+            resolve();
+          };
+          img.onerror = () => resolve(); // Continue even if logo fails
+          img.src = url;
+        });
+      };
+
+      await addImageFromUrl(logoUrl);
+
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(22);
+      doc.setTextColor(0, 0, 0);
+      doc.text('GUIA DE POSTAGEM', 105, 60, { align: 'center' });
+      
+      doc.setFontSize(14);
+      doc.setTextColor(100, 100, 100);
+      doc.text('DEEWY STUDIO', 105, 70, { align: 'center' });
+
+      // Horizontal Line
+      doc.setDrawColor(200, 200, 200);
+      doc.line(20, 80, 190, 80);
+
+      // Section 1: Resolução
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('1. RESOLUÇÃO IDEAL', 20, 95);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      const resText = 'As imagens nesta galeria já estão otimizadas para o Instagram (formatos 4:5 e 5:4). Não há necessidade de redimensionar ou cortar, elas já estão prontas para a melhor visualização.';
+      const resLines = doc.splitTextToSize(resText, 170);
+      doc.text(resLines, 20, 105);
+
+      // Section 2: Qualidade
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('2. QUALIDADE MÁXIMA NO INSTAGRAM', 20, 125);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      doc.text('Antes de postar, ative o upload em alta qualidade:', 20, 135);
+      
+      const steps = [
+        '• Acesse seu perfil no Instagram',
+        '• Toque no menu (três riscos no canto superior direito)',
+        '• Vá em \'Configurações e privacidade\'',
+        '• Procure por \'Uso de dados e qualidade da mídia\'',
+        '• Ative a opção \'Carregar em alta qualidade\''
+      ];
+      doc.text(steps, 25, 145);
+
+      // Section 3: Toque Final
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(16);
+      doc.setTextColor(0, 0, 0);
+      doc.text('3. TOQUE FINAL', 20, 185);
+      
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      doc.setTextColor(60, 60, 60);
+      const finalTip = 'Se desejar ainda mais definição, você pode adicionar um leve toque de \'Nitidez\' (Sharpness) usando as ferramentas de edição do próprio Instagram antes de concluir a postagem.';
+      const finalLines = doc.splitTextToSize(finalTip, 170);
+      doc.text(finalLines, 20, 195);
+
+      // Footer
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(10);
+      doc.setTextColor(150, 150, 150);
+      doc.text('Aproveite seus registros!', 105, 250, { align: 'center' });
+      doc.text('Photo by Deewy', 105, 255, { align: 'center' });
+
+      doc.save('guia-de-postagem-deewy.pdf');
+    } catch (error) {
+      console.error('Erro ao gerar PDF:', error);
+      // Fallback to old method if PDF fails
+      const tips = `GUIA DE POSTAGEM - DEEWY STUDIO...`; // Simplified fallback
+      const blob = new Blob([tips], { type: 'text/plain' });
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'guia-de-postagem-deewy.txt';
+      link.click();
     }
   };
 
@@ -286,35 +397,198 @@ export default function ClientView({ code }: { code: string }) {
         </div>
       </header>
 
-      {/* Drive Link Section - Smart Design */}
-      {event.driveLink && (
+      {/* Social Media Tips Section */}
+      {event.showSocialTips && (
         <section className="px-6 md:px-16 py-12">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="bg-white/5 border border-white/10 rounded-[2.5rem] p-8 md:p-12 flex flex-col md:flex-row items-center justify-between gap-8 group hover:border-primary/30 transition-all duration-500"
+            className="bg-gradient-to-br from-[#111111] to-[#0A0A0A] border border-white/10 rounded-[2.5rem] p-8 md:p-16 relative overflow-hidden group"
           >
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary shadow-2xl shadow-primary/10 group-hover:scale-110 transition-transform">
-                <ExternalLink size={32} />
+            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full -mr-48 -mt-48 group-hover:bg-primary/10 transition-all duration-700" />
+            
+            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+              <div className="space-y-8">
+                <div className="space-y-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
+                      <Instagram size={20} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Social Media Kit</span>
+                  </div>
+                  <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
+                    Guia de <br /> <span className="text-primary">Postagem.</span>
+                  </h2>
+                  <p className="text-white/40 font-medium max-w-md">
+                    Como fotógrafo, já otimizei cada detalhe de edição e resolução para você. Siga estas dicas apenas para garantir que o Instagram não reduza essa qualidade.
+                  </p>
+                </div>
+
+                <div className="space-y-6">
+                  {[
+                    {
+                      title: "Resolução Otimizada",
+                      desc: "Suas fotos já estão otimizadas para o Instagram (formatos 4:5 e 5:4), sem necessidade de redimensionar."
+                    },
+                    {
+                      title: "Upload em Alta Qualidade",
+                      desc: "Ative 'Carregar em alta qualidade' nas configurações de 'Uso de dados' do seu Instagram."
+                    },
+                    {
+                      title: "Nitidez Extra",
+                      desc: "Use a ferramenta de 'Nitidez' do Instagram para um toque profissional final."
+                    }
+                  ].map((tip, i) => (
+                    <div key={i} className="flex gap-4">
+                      <div className="mt-1">
+                        <CheckCircle2 size={18} className="text-primary" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-tighter mb-1">{tip.title}</h4>
+                        <p className="text-xs text-white/30 font-medium leading-relaxed">{tip.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex flex-wrap gap-4 pt-4">
+                  <button 
+                    onClick={() => setShowTipsGuide(true)}
+                    className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                  >
+                    <FileText size={14} /> Ver Guia Completo
+                  </button>
+                  <button 
+                    onClick={downloadTips}
+                    className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all flex items-center gap-2"
+                  >
+                    <Download size={14} /> Baixar Guia (PDF)
+                  </button>
+                </div>
               </div>
-              <div>
-                <h3 className="text-xl md:text-2xl font-black uppercase tracking-tighter mb-1">Problemas ao carregar?</h3>
-                <p className="text-white/40 text-sm font-medium">Acesse a pasta completa no Google Drive para baixar em alta resolução.</p>
+
+              <div className="relative hidden lg:block">
+                <div className="aspect-square bg-white/5 rounded-[3rem] border border-white/5 p-8 flex items-center justify-center relative overflow-hidden">
+                  <motion.div 
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                    className="absolute inset-0 border border-dashed border-white/10 rounded-full m-12"
+                  />
+                  <div className="relative z-10 flex flex-col items-center gap-6">
+                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-0.5 shadow-2xl">
+                      <div className="w-full h-full bg-[#111111] rounded-[calc(1.5rem-2px)] flex items-center justify-center">
+                        <Instagram size={48} className="text-white" />
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Ideal para</p>
+                      <p className="text-2xl font-black uppercase tracking-tighter">Instagram</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-            <a 
-              href={event.driveLink} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="w-full md:w-auto px-10 py-5 bg-white text-black font-black uppercase tracking-widest text-xs rounded-2xl hover:bg-primary hover:text-white transition-all text-center"
-            >
-              Acessar Google Drive
-            </a>
           </motion.div>
         </section>
       )}
+
+      {/* Full Tips Modal */}
+      <AnimatePresence>
+        {showTipsGuide && (
+          <div className="fixed inset-0 z-[2000] flex items-center justify-center p-6">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowTipsGuide(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-xl"
+            />
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#111111] border border-white/10 rounded-[3rem] p-10 md:p-16 shadow-2xl overflow-y-auto max-h-[90vh] custom-scrollbar"
+            >
+              <button 
+                onClick={() => setShowTipsGuide(false)}
+                className="absolute top-8 right-8 w-12 h-12 flex items-center justify-center bg-white/5 rounded-full hover:bg-white/10 transition-all"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="space-y-12">
+                <div className="text-center space-y-4">
+                  <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center text-primary mx-auto">
+                    <Instagram size={32} />
+                  </div>
+                  <h2 className="text-4xl font-black uppercase tracking-tighter">Guia de Qualidade</h2>
+                  <p className="text-white/40 text-sm font-medium">Como fotógrafo, já realizei toda a otimização de cor, nitidez e resolução por aqui. Siga estes passos apenas para garantir que o Instagram mantenha a fidelidade original ao postar.</p>
+                </div>
+
+                <div className="space-y-10">
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs">1</span>
+                      Configuração do App
+                    </h3>
+                    <div className="bg-white/5 rounded-2xl p-6 border border-white/5 space-y-4">
+                      <p className="text-sm text-white/60 leading-relaxed">
+                        O Instagram, por padrão, reduz a qualidade do upload para economizar dados. Para desativar isso:
+                      </p>
+                      <ul className="space-y-3 text-sm text-white/80 font-medium">
+                        <li className="flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Vá no seu Perfil e toque no Menu (três riscos)
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                          <span>Configurações e privacidade</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary mt-1.5 flex-shrink-0" />
+                          <span>Uso de dados e qualidade da mídia</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                          <div className="w-1.5 h-1.5 rounded-full bg-primary" />
+                          Ative: <span className="text-primary">Carregar em alta qualidade</span>
+                        </li>
+                      </ul>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs">2</span>
+                      Resolução e Formato
+                    </h3>
+                    <p className="text-sm text-white/60 leading-relaxed pl-11">
+                      As fotos entregues nesta galeria já estão otimizadas para o Instagram. Elas podem variar entre os formatos <span className="text-white font-bold">4:5 (Vertical)</span> e <span className="text-white font-bold">5:4 (Horizontal)</span>. <span className="text-white font-bold">Não há necessidade de redimensionar ou cortar</span>, elas já estão prontas para a melhor visualização.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-black uppercase tracking-tighter flex items-center gap-3">
+                      <span className="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center text-xs">3</span>
+                      Dica de Edição (Opcional)
+                    </h3>
+                    <p className="text-sm text-white/60 leading-relaxed pl-11">
+                      Na tela final de postagem do Instagram, toque em 'Editar' e adicione entre <span className="text-white font-bold">10 a 20 de Nitidez (Sharpness)</span>. Isso ajuda a compensar a compressão natural da rede social.
+                    </p>
+                  </div>
+                </div>
+
+                <button 
+                  onClick={downloadTips}
+                  className="w-full py-6 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-primary hover:text-white transition-all flex items-center justify-center gap-3"
+                >
+                  <Download size={18} /> Baixar Guia em Texto
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Gallery Grid */}
       <section className="px-4 md:px-16 py-12 md:py-20">

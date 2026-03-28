@@ -3,7 +3,7 @@ import { User, signOut } from 'firebase/auth';
 import { auth, db } from '../firebase';
 import { ref, push, onValue, set, remove, update } from 'firebase/database';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, LogOut, Copy, Trash2, ExternalLink, Image as ImageIcon, Type, Hash, Check, X, Edit3, Palette, Sparkles, Search, LayoutGrid, Briefcase, Heart, Camera, User as UserIcon } from 'lucide-react';
+import { Plus, LogOut, Copy, Trash2, ExternalLink, Image as ImageIcon, Type, Hash, Check, X, Edit3, Palette, Sparkles, Search, LayoutGrid, Briefcase, Heart, Camera, User as UserIcon, Instagram } from 'lucide-react';
 import { PhotoEvent, PortfolioData } from '../types';
 
 const PRESET_COLORS = ['#f0052d', '#090005', '#D4AF37', '#10B981', '#6366F1', '#FB7185', '#FFFFFF'];
@@ -23,7 +23,8 @@ export default function AdminView({ user }: { user: User }) {
     name: '',
     photoUrls: '',
     customText: '',
-    driveLink: ''
+    driveLink: '',
+    showSocialTips: false
   });
   
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -107,7 +108,8 @@ export default function AdminView({ user }: { user: User }) {
         name: event.name,
         photoUrls: event.photoUrls.join('\n'),
         customText: event.customText,
-        driveLink: event.driveLink || ''
+        driveLink: event.driveLink || '',
+        showSocialTips: event.showSocialTips || false
       });
     } else {
       setEditingEvent(null);
@@ -115,7 +117,8 @@ export default function AdminView({ user }: { user: User }) {
         name: '',
         photoUrls: '',
         customText: '',
-        driveLink: ''
+        driveLink: '',
+        showSocialTips: false
       });
     }
     setIsModalOpen(true);
@@ -130,6 +133,7 @@ export default function AdminView({ user }: { user: User }) {
       photoUrls: parsePhotoUrls(formData.photoUrls),
       customText: formData.customText,
       driveLink: formData.driveLink,
+      showSocialTips: formData.showSocialTips,
       updatedAt: Date.now()
     };
 
@@ -537,6 +541,28 @@ export default function AdminView({ user }: { user: User }) {
                       value={formData.customText}
                       onChange={(e) => setFormData({ ...formData, customText: e.target.value })}
                     />
+                  </div>
+
+                  <div className="p-8 bg-white/5 rounded-[2rem] border border-white/10 flex items-center justify-between group hover:border-primary/30 transition-all">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all ${formData.showSocialTips ? 'bg-primary text-white shadow-lg shadow-primary/20' : 'bg-white/5 text-white/20'}`}>
+                        <Instagram size={24} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-black uppercase tracking-tighter">Dicas de Redes Sociais</h4>
+                        <p className="text-[10px] font-bold text-white/20 uppercase tracking-widest">Ativar guia de postagem para o cliente</p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({ ...formData, showSocialTips: !formData.showSocialTips })}
+                      className={`w-14 h-8 rounded-full relative transition-all duration-500 ${formData.showSocialTips ? 'bg-primary' : 'bg-white/10'}`}
+                    >
+                      <motion.div 
+                        animate={{ x: formData.showSocialTips ? 24 : 4 }}
+                        className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-lg"
+                      />
+                    </button>
                   </div>
 
                   <div className="flex flex-col sm:flex-row gap-4 pt-6">

@@ -10,6 +10,7 @@ export interface PhotoEvent {
   logoUrl?: string;
   ownerId?: string;
   driveLink?: string;
+  showSocialTips?: boolean;
 }
 
 export interface UserProfile {
