@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, SyntheticEvent, UIEvent, useCallback } from 'react';
+import { useState, useEffect, useRef, SyntheticEvent, UIEvent, useCallback, MouseEvent } from 'react';
 import { jsPDF } from 'jspdf';
 import { db } from '../firebase';
 import { ref, onValue } from 'firebase/database';
@@ -17,6 +17,7 @@ export default function ClientView({ code }: { code: string }) {
   const [hasClosedPopup, setHasClosedPopup] = useState(false);
   const [visibleChunks, setVisibleChunks] = useState(1);
   const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState({ x: 50, y: 50 });
   const [focusedChunkIndex, setFocusedChunkIndex] = useState(0);
 
   const [showCopyFeedback, setShowCopyFeedback] = useState(false);
@@ -193,6 +194,16 @@ export default function ClientView({ code }: { code: string }) {
       link.download = 'guia-de-postagem-deewy.txt';
       link.click();
     }
+  };
+
+  const handleMouseMove = (e: MouseEvent<HTMLDivElement>) => {
+    if (!isZoomed || isMobile) return;
+    
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    
+    setZoomOrigin({ x, y });
   };
 
   const nextPhoto = useCallback(() => {
@@ -761,7 +772,7 @@ export default function ClientView({ code }: { code: string }) {
                 initial={{ opacity: 0, x: 50, scale: 0.95 }}
                 animate={{ opacity: 1, x: 0, scale: 1 }}
                 exit={{ opacity: 0, x: -50, scale: 0.95 }}
-                drag="x"
+                drag={!isZoomed ? "x" : false}
                 dragConstraints={{ left: 0, right: 0 }}
                 dragElastic={0.2}
                 onDragEnd={(_, info) => {
@@ -770,11 +781,25 @@ export default function ClientView({ code }: { code: string }) {
                 }}
                 transition={{ type: "spring", damping: 25, stiffness: 200 }}
                 className={`w-full h-full flex items-center justify-center ${isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'}`}
-                onClick={() => !isMobile && setIsZoomed(!isZoomed)}
+                onMouseMove={handleMouseMove}
+                onClick={(e) => {
+                  if (isMobile) return;
+                  if (!isZoomed) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const x = ((e.clientX - rect.left) / rect.width) * 100;
+                    const y = ((e.clientY - rect.top) / rect.height) * 100;
+                    setZoomOrigin({ x, y });
+                  }
+                  setIsZoomed(!isZoomed);
+                }}
               >
                 <img 
                   src={event.photoUrls[selectedPhotoIndex]} 
-                  className={`max-w-full max-h-full object-contain shadow-[0_50px_100px_rgba(0,0,0,0.5)] rounded-lg md:rounded-2xl transition-transform duration-500 ${isZoomed ? 'scale-[1.8]' : 'scale-100'}`} 
+                  className={`max-w-full max-h-full object-contain shadow-[0_50px_100px_rgba(0,0,0,0.5)] rounded-lg md:rounded-2xl transition-transform duration-300 ease-out`} 
+                  style={{ 
+                    transformOrigin: `${zoomOrigin.x}% ${zoomOrigin.y}%`,
+                    transform: isZoomed ? 'scale(2.5)' : 'scale(1)'
+                  }}
                   alt=""
                 />
               </motion.div>
