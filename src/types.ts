@@ -49,3 +49,18 @@ export interface PortfolioData {
     };
   };
 }
+
+export interface Contract {
+  id: string;
+  clientName: string;
+  clientCpf?: string;
+  clientAddress?: string;
+  serviceType: 'time' | 'quantity' | 'monthly' | 'other';
+  serviceDescription: string;
+  location: string;
+  value: string;
+  date: string;
+  createdAt: number;
+  updatedAt: number;
+  content: string;
+}
