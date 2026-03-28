@@ -408,99 +408,95 @@ export default function ClientView({ code }: { code: string }) {
         </div>
       </header>
 
-      {/* Social Media Tips Section */}
-      {event.showSocialTips && (
-        <section className="px-6 md:px-16 py-12">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-gradient-to-br from-[#111111] to-[#0A0A0A] border border-white/10 rounded-[2.5rem] p-8 md:p-16 relative overflow-hidden group"
-          >
-            <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 blur-[100px] rounded-full -mr-48 -mt-48 group-hover:bg-primary/10 transition-all duration-700" />
-            
-            <div className="relative z-10 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-              <div className="space-y-8">
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center text-primary">
-                      <Instagram size={20} />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-[0.4em] text-primary">Social Media Kit</span>
-                  </div>
-                  <h2 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none">
-                    Guia de <br /> <span className="text-primary">Postagem.</span>
-                  </h2>
-                  <p className="text-white/40 font-medium max-w-md">
-                    Como fotógrafo, já otimizei cada detalhe de edição e resolução para você. Siga estas dicas apenas para garantir que o Instagram não reduza essa qualidade.
-                  </p>
-                </div>
-
-                <div className="space-y-6">
-                  {[
-                    {
-                      title: "Resolução Otimizada",
-                      desc: "Suas fotos já estão otimizadas para o Instagram (formatos 4:5 e 5:4), sem necessidade de redimensionar."
-                    },
-                    {
-                      title: "Upload em Alta Qualidade",
-                      desc: "Ative 'Carregar em alta qualidade' nas configurações de 'Uso de dados' do seu Instagram."
-                    },
-                    {
-                      title: "Nitidez Extra",
-                      desc: "Use a ferramenta de 'Nitidez' do Instagram para um toque profissional final."
-                    }
-                  ].map((tip, i) => (
-                    <div key={i} className="flex gap-4">
-                      <div className="mt-1">
-                        <CheckCircle2 size={18} className="text-primary" />
+      {/* Client Resources Section */}
+      {(event.showSocialTips || event.driveLink) && (
+        <section className="px-4 md:px-16 py-8 md:py-12">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
+            {/* Social Media Kit Card */}
+            {event.showSocialTips && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className={`${event.driveLink ? 'lg:col-span-7' : 'lg:col-span-12'} bg-gradient-to-br from-[#111111] to-[#0A0A0A] border border-white/10 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative overflow-hidden group`}
+              >
+                <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 blur-[80px] rounded-full -mr-32 -mt-32 group-hover:bg-primary/10 transition-all duration-700" />
+                
+                <div className="relative z-10 flex flex-col md:flex-row gap-8 items-start md:items-center">
+                  <div className="flex-1 space-y-4">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center text-primary">
+                        <Instagram size={16} />
                       </div>
-                      <div>
-                        <h4 className="text-sm font-black uppercase tracking-tighter mb-1">{tip.title}</h4>
-                        <p className="text-xs text-white/30 font-medium leading-relaxed">{tip.desc}</p>
-                      </div>
+                      <span className="text-[9px] font-black uppercase tracking-[0.4em] text-primary">Social Media Kit</span>
                     </div>
-                  ))}
-                </div>
-
-                <div className="flex flex-wrap gap-4 pt-4">
-                  <button 
-                    onClick={() => setShowTipsGuide(true)}
-                    className="px-8 py-4 bg-white text-black rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-primary hover:text-white transition-all flex items-center gap-2"
-                  >
-                    <FileText size={14} /> Ver Guia Completo
-                  </button>
-                  <button 
-                    onClick={downloadTips}
-                    className="px-8 py-4 bg-white/5 border border-white/10 text-white rounded-2xl font-black uppercase tracking-widest text-[10px] hover:bg-white/10 transition-all flex items-center gap-2"
-                  >
-                    <Download size={14} /> Baixar Guia (PDF)
-                  </button>
-                </div>
-              </div>
-
-              <div className="relative hidden lg:block">
-                <div className="aspect-square bg-white/5 rounded-[3rem] border border-white/5 p-8 flex items-center justify-center relative overflow-hidden">
-                  <motion.div 
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
-                    className="absolute inset-0 border border-dashed border-white/10 rounded-full m-12"
-                  />
-                  <div className="relative z-10 flex flex-col items-center gap-6">
-                    <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-0.5 shadow-2xl">
-                      <div className="w-full h-full bg-[#111111] rounded-[calc(1.5rem-2px)] flex items-center justify-center">
-                        <Instagram size={48} className="text-white" />
-                      </div>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-[10px] font-black uppercase tracking-[0.3em] text-white/20 mb-2">Ideal para</p>
-                      <p className="text-2xl font-black uppercase tracking-tighter">Instagram</p>
+                    <h2 className="text-3xl md:text-4xl font-black uppercase tracking-tighter leading-none">
+                      Guia de <span className="text-primary" style={{ color: brandColor }}>Postagem.</span>
+                    </h2>
+                    <p className="text-white/40 text-xs font-medium max-w-md leading-relaxed">
+                      Fotos otimizadas para o Instagram. Siga o guia para manter a qualidade máxima ao postar.
+                    </p>
+                    <div className="flex flex-wrap gap-3 pt-2">
+                      <button 
+                        onClick={() => setShowTipsGuide(true)}
+                        className="px-6 py-3 bg-white text-black rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-primary hover:text-white transition-all flex items-center gap-2"
+                      >
+                        <FileText size={12} /> Ver Guia
+                      </button>
+                      <button 
+                        onClick={downloadTips}
+                        className="px-6 py-3 bg-white/5 border border-white/10 text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-white/10 transition-all flex items-center gap-2"
+                      >
+                        <Download size={12} /> PDF
+                      </button>
                     </div>
                   </div>
+                  
+                  <div className="hidden md:flex flex-col items-center gap-3 px-8 border-l border-white/5">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-tr from-[#833ab4] via-[#fd1d1d] to-[#fcb045] p-0.5 shadow-xl">
+                      <div className="w-full h-full bg-[#111111] rounded-[calc(1rem-2px)] flex items-center justify-center">
+                        <Instagram size={32} className="text-white" />
+                      </div>
+                    </div>
+                    <span className="text-[9px] font-black uppercase tracking-widest text-white/20">Instagram Ready</span>
+                  </div>
                 </div>
-              </div>
-            </div>
-          </motion.div>
+              </motion.div>
+            )}
+
+            {/* Drive Link Card */}
+            {event.driveLink && (
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className={`${event.showSocialTips ? 'lg:col-span-5' : 'lg:col-span-12'} bg-white/5 border border-white/10 rounded-[2rem] md:rounded-[3rem] p-6 md:p-10 relative overflow-hidden group flex flex-col justify-center`}
+              >
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 blur-[60px] rounded-full -ml-24 -mb-24" />
+                
+                <div className="relative z-10 space-y-6">
+                  <div className="space-y-2">
+                    <div className="text-[9px] font-black uppercase tracking-widest text-white/20">Backup Externo</div>
+                    <h3 className="text-2xl md:text-3xl font-black uppercase tracking-tighter leading-tight">
+                      Arquivos <br /> <span className="text-white/40">Originais.</span>
+                    </h3>
+                    <p className="text-white/30 text-[10px] font-medium leading-relaxed max-w-[200px]">
+                      Problemas com as imagens? Acesse o link e baixe tudo em alta resolução.
+                    </p>
+                  </div>
+                  
+                  <a 
+                    href={event.driveLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-3 px-6 py-4 bg-white/10 border border-white/10 text-white rounded-xl font-black uppercase tracking-widest text-[9px] hover:bg-white hover:text-black transition-all group/btn"
+                  >
+                    Acessar Google Drive <ExternalLink size={12} className="group-hover/btn:translate-x-1 transition-transform" />
+                  </a>
+                </div>
+              </motion.div>
+            )}
+          </div>
         </section>
       )}
 
